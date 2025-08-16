@@ -1,7 +1,15 @@
+# Environment Variables
+.env
+.env.*
+*.env
+/backend/.env
+/frontend/.env
+
 # Virtual Environment
 prompt/
 venv/
 .env/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
