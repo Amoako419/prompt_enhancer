@@ -46,7 +46,7 @@ Getting Started
 
 ### 1. Clone / download the repo
 ```bash
-git clone https://github.com/yourname/prompt-enhancer.git
+git clone https://github.com/amoako419/prompt-enhancer.git
 cd prompt-enhancer
 ```
 
@@ -129,5 +129,4 @@ Pull requests welcome! Please open an issue first for large changes.
 License
 -------
 MIT © 2024
-```
 
