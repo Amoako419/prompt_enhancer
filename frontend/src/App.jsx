@@ -1,11 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { Wand2, RotateCw, Check, X, Send } from "lucide-react";
+import { Wand2, RotateCw, Check, X, Send, ArrowLeft } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import AITools from './components/AITools';
 import "./App.css";
 
 export default function App() {
+  const [showTools, setShowTools] = useState(true);
+
+  if (showTools) {
+    return <AITools onNavigateToEnhancer={() => setShowTools(false)} />;
+  }
+  
   /* ---------- chat state ---------- */
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -76,7 +83,16 @@ export default function App() {
 
   return (
     <div className="chat-wrapper">
-      <header className="chat-header">Prompt Enhancer Chat</header>
+      <header className="chat-header">
+        <button 
+          className="back-btn" 
+          onClick={() => setShowTools(true)}
+          title="Back to AI Tools"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <span>Prompt Enhancer Chat</span>
+      </header>
 
       <div className="chat-body">
         {messages.map((msg, i) => (
