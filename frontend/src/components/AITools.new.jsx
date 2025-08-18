@@ -30,11 +30,6 @@ export default function AITools({ onNavigateToEnhancer }) {
       description: 'Deepseek R1 Distill of Llama 70b'
     },
     {
-      icon: <Users className="tool-icon" />,
-      title: 'AmaliAI HR',
-      description: 'Can answer HR-related queries at AmaliTech, covering workplace policies and benefits. Powered by OpenAI.'
-    },
-    {
       icon: <HelpCircle className="tool-icon" />,
       title: 'Evaluation Tool',
       description: "An evaluation tool that is used to evaluate a model's performances. See how your model really performs."
