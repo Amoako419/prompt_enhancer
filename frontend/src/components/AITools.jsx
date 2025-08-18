@@ -1,7 +1,7 @@
-import { MessageSquare, GitBranch, Brain, Database, Users, Workflow, Wand2, BarChart3 } from 'lucide-react';
+import { MessageSquare, GitBranch, Brain, Database, Users, Workflow, Wand2, BarChart3, Award } from 'lucide-react';
 import '../styles/AITools.css';
 
-export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer }) {
+export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer, onNavigateToSkillAssessment }) {
   const tools = [
     {
       icon: <Wand2 className="tool-icon" />,
@@ -9,26 +9,27 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
       description: 'Enhance your prompts with AI assistance. Make your prompts more effective and get better results.',
       onClick: onNavigateToEnhancer
     },
-    {
-      icon: <MessageSquare className="tool-icon" />,
-      title: 'AmaliAI Chat',
-      description: 'Supports long prompts up to 150k words and file uploads (~200K tokens), ideal for extensive inputs like codebases or books. Powered by Anthropic.'
-    },
-    {
-      icon: <GitBranch className="tool-icon" />,
-      title: 'Code Analysis',
-      description: 'Analysis all your code repositories from GitHub'
-    },
+    // {
+    //   icon: <MessageSquare className="tool-icon" />,
+    //   title: 'AmaliAI Chat',
+    //   description: 'Supports long prompts up to 150k words and file uploads (~200K tokens), ideal for extensive inputs like codebases or books. Powered by Anthropic.'
+    // },
+    // {
+    //   icon: <GitBranch className="tool-icon" />,
+    //   title: 'Code Analysis',
+    //   description: 'Analysis all your code repositories from GitHub'
+    // },
     {
       icon: <Brain className="tool-icon" />,
       title: 'Skill Assessment',
-      description: 'Evaluate your coding skills with interactive quizzes and challenges.'
+      description: 'Evaluate your data science and engineering skills with interactive quizzes and hands-on challenges.',
+      onClick: onNavigateToSkillAssessment
     },
-    {
-      icon: <Workflow className="tool-icon" />,
-      title: 'Deepseek R1',
-      description: 'Deepseek R1 Distill of Llama 70b'
-    },
+    // {
+    //   icon: <Workflow className="tool-icon" />,
+    //   title: 'Deepseek R1',
+    //   description: 'Deepseek R1 Distill of Llama 70b'
+    // },
     {
       icon: <Database className="tool-icon" />,
       title: 'English to SQL',
