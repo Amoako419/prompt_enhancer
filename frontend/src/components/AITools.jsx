@@ -1,7 +1,7 @@
-import { MessageSquare, GitBranch, Brain, HelpCircle, Users, Workflow, Wand2 } from 'lucide-react';
+import { MessageSquare, GitBranch, Brain, Database, Users, Workflow, Wand2, BarChart3 } from 'lucide-react';
 import '../styles/AITools.css';
 
-export default function AITools({ onNavigateToEnhancer }) {
+export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer }) {
   const tools = [
     {
       icon: <Wand2 className="tool-icon" />,
@@ -30,14 +30,16 @@ export default function AITools({ onNavigateToEnhancer }) {
       description: 'Deepseek R1 Distill of Llama 70b'
     },
     {
-      icon: <Users className="tool-icon" />,
-      title: 'AmaliAI HR',
-      description: 'Can answer HR-related queries at AmaliTech, covering workplace policies and benefits. Powered by OpenAI.'
+      icon: <Database className="tool-icon" />,
+      title: 'English to SQL',
+      description: 'Convert plain English queries into SQL statements. Perfect for database operations and data analysis.',
+      onClick: onNavigateToSqlConverter
     },
     {
-      icon: <HelpCircle className="tool-icon" />,
-      title: 'Evaluation Tool',
-      description: "An evaluation tool that is used to evaluate a model's performances. See how your model really performs."
+      icon: <BarChart3 className="tool-icon" />,
+      title: 'Smart Data Exploration',
+      description: 'Auto-generate EDA code, statistical analysis, anomaly detection, and data visualization recommendations.',
+      onClick: onNavigateToDataExplorer
     }
   ];
 
