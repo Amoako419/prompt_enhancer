@@ -142,6 +142,33 @@ class EvaluationResponse(BaseModel):
     recommendations: List[str]
     detailed_feedback: str
 
+class FieldSchema(BaseModel):
+    name: str
+    type: str
+    constraints: str
+
+class SchemaConfig(BaseModel):
+    tableName: str
+    recordCount: int
+    format: str
+    fields: List[FieldSchema]
+
+class PipelineConfig(BaseModel):
+    testType: str
+    dataQuality: str
+    includeEdgeCases: bool
+    includeNulls: bool
+    duplicatePercentage: int
+
+class DataPipelineRequest(BaseModel):
+    schema: SchemaConfig
+    pipeline: PipelineConfig
+
+class DataPipelineResponse(BaseModel):
+    data: str
+    preview: str
+    metadata: dict
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
     """
@@ -487,6 +514,216 @@ Base your feedback on the {request.category} domain and {request.difficulty} dif
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate-pipeline-data", response_model=DataPipelineResponse)
+async def generate_pipeline_data(req: DataPipelineRequest):
+    """
+    Generate test data for data pipeline testing based on schema and configuration
+    """
+    try:
+        import csv
+        import json
+        import random
+        import string
+        from datetime import datetime, timedelta
+        from faker import Faker
+        
+        fake = Faker()
+        
+        # Create AI prompt for realistic data generation
+        prompt = f"""
+        Generate realistic test data for a data pipeline with the following specifications:
+        
+        Table: {req.schema.tableName}
+        Record Count: {req.schema.recordCount}
+        Test Type: {req.pipeline.testType}
+        Data Quality: {req.pipeline.dataQuality}
+        Include Edge Cases: {req.pipeline.includeEdgeCases}
+        Include Nulls: {req.pipeline.includeNulls}
+        Duplicate Percentage: {req.pipeline.duplicatePercentage}%
+        
+        Schema Fields:
+        {[f"{field.name} ({field.type}) - {field.constraints}" for field in req.schema.fields]}
+        
+        Please provide guidance on generating realistic data that matches this schema.
+        Focus on data types, constraints, and testing requirements.
+        """
+        
+        # Get AI guidance for data generation
+        response = model.generate_content(prompt)
+        ai_guidance = response.text
+        
+        # Generate actual data based on schema
+        generated_records = []
+        
+        # Helper function to generate data by type
+        def generate_value(field_type, constraints, include_null=False):
+            if include_null and random.random() < 0.1:  # 10% chance of null
+                return None
+                
+            if field_type == 'integer':
+                if 'primary_key' in constraints or 'auto_increment' in constraints:
+                    return len(generated_records) + 1
+                return random.randint(1, 10000)
+            elif field_type == 'string':
+                return fake.name() if 'name' in constraints.lower() else fake.word()
+            elif field_type == 'email':
+                return fake.email()
+            elif field_type == 'phone':
+                return fake.phone_number()
+            elif field_type == 'url':
+                return fake.url()
+            elif field_type == 'uuid':
+                return str(fake.uuid4())
+            elif field_type == 'datetime':
+                return fake.date_time_between(start_date='-1y', end_date='now').isoformat()
+            elif field_type == 'date':
+                return fake.date_between(start_date='-1y', end_date='today').isoformat()
+            elif field_type == 'boolean':
+                return random.choice([True, False])
+            elif field_type == 'float':
+                return round(random.uniform(0, 1000), 2)
+            elif field_type == 'json':
+                return json.dumps({"key": fake.word(), "value": fake.sentence()})
+            elif field_type == 'text':
+                return fake.text(max_nb_chars=200)
+            else:
+                return fake.word()
+        
+        # Generate records
+        for i in range(req.schema.recordCount):
+            record = {}
+            for field in req.schema.fields:
+                include_null = req.pipeline.includeNulls and 'not_null' not in field.constraints
+                value = generate_value(field.type, field.constraints, include_null)
+                record[field.name] = value
+            generated_records.append(record)
+        
+        # Add duplicates if requested
+        if req.pipeline.duplicatePercentage > 0:
+            duplicate_count = int(len(generated_records) * req.pipeline.duplicatePercentage / 100)
+            for _ in range(duplicate_count):
+                if generated_records:
+                    duplicate_record = random.choice(generated_records).copy()
+                    generated_records.append(duplicate_record)
+        
+        # Add edge cases if requested
+        if req.pipeline.includeEdgeCases:
+            edge_cases = []
+            for field in req.schema.fields:
+                if field.type == 'string':
+                    edge_cases.append({field.name: ""})  # Empty string
+                    edge_cases.append({field.name: "a" * 1000})  # Very long string
+                elif field.type == 'integer':
+                    edge_cases.append({field.name: 0})
+                    edge_cases.append({field.name: -1})
+                    edge_cases.append({field.name: 999999999})
+                elif field.type == 'email':
+                    edge_cases.append({field.name: "invalid-email"})
+                    edge_cases.append({field.name: "@domain.com"})
+            
+            # Add a few edge case records
+            for i in range(min(5, len(edge_cases))):
+                edge_record = {}
+                for field in req.schema.fields:
+                    edge_record[field.name] = generate_value(field.type, field.constraints)
+                
+                # Apply one edge case
+                if i < len(edge_cases):
+                    edge_record.update(edge_cases[i])
+                
+                generated_records.append(edge_record)
+        
+        # Format output based on requested format
+        if req.schema.format == 'csv':
+            output = []
+            if generated_records:
+                # CSV header
+                headers = [field.name for field in req.schema.fields]
+                output.append(','.join(headers))
+                
+                # CSV rows
+                for record in generated_records:
+                    row = []
+                    for field in req.schema.fields:
+                        value = record.get(field.name, '')
+                        if value is None:
+                            row.append('')
+                        elif isinstance(value, str):
+                            row.append(f'"{value}"')
+                        else:
+                            row.append(str(value))
+                    output.append(','.join(row))
+            
+            data_content = '\n'.join(output)
+            
+        elif req.schema.format == 'json':
+            data_content = json.dumps(generated_records, indent=2, default=str)
+            
+        elif req.schema.format == 'sql':
+            if generated_records:
+                headers = [field.name for field in req.schema.fields]
+                insert_statements = []
+                insert_statements.append(f"-- Generated test data for {req.schema.tableName}")
+                
+                for record in generated_records:
+                    values = []
+                    for field in req.schema.fields:
+                        value = record.get(field.name)
+                        if value is None:
+                            values.append('NULL')
+                        elif isinstance(value, str):
+                            values.append(f"'{value.replace("'", "''")}'")
+                        else:
+                            values.append(str(value))
+                    
+                    insert_sql = f"INSERT INTO {req.schema.tableName} ({', '.join(headers)}) VALUES ({', '.join(values)});"
+                    insert_statements.append(insert_sql)
+                
+                data_content = '\n'.join(insert_statements)
+            else:
+                data_content = f"-- No data generated for {req.schema.tableName}"
+                
+        else:  # parquet or other formats
+            data_content = json.dumps(generated_records, indent=2, default=str)
+        
+        # Create preview (first 5 records)
+        preview_records = generated_records[:5]
+        if req.schema.format == 'csv':
+            preview_lines = data_content.split('\n')[:6]  # Header + 5 records
+            preview = '\n'.join(preview_lines)
+        elif req.schema.format == 'json':
+            preview = json.dumps(preview_records, indent=2, default=str)
+        elif req.schema.format == 'sql':
+            preview_lines = data_content.split('\n')[:6]  # Comment + 5 statements
+            preview = '\n'.join(preview_lines)
+        else:
+            preview = json.dumps(preview_records, indent=2, default=str)
+        
+        # Calculate metadata
+        data_size = len(data_content.encode('utf-8'))
+        file_size = f"{data_size / 1024:.1f} KB" if data_size < 1024*1024 else f"{data_size / (1024*1024):.1f} MB"
+        
+        metadata = {
+            "recordCount": len(generated_records),
+            "fileSize": file_size,
+            "generationTime": f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "duplicateCount": int(len(generated_records) * req.pipeline.duplicatePercentage / 100) if req.pipeline.duplicatePercentage > 0 else 0,
+            "hasEdgeCases": req.pipeline.includeEdgeCases,
+            "hasNulls": req.pipeline.includeNulls,
+            "dataQuality": req.pipeline.dataQuality,
+            "testType": req.pipeline.testType
+        }
+        
+        return DataPipelineResponse(
+            data=data_content,
+            preview=preview,
+            metadata=metadata
+        )
+        
+    except Exception as e:
+        print(f"Pipeline data generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate pipeline data: {str(e)}")
 
 from fastapi.middleware.cors import CORSMiddleware
 
