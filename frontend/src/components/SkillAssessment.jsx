@@ -215,6 +215,64 @@ export default function SkillAssessment({ onBackToTools }) {
     return items.map(item => item.charAt(0).toUpperCase() + item.slice(1).toLowerCase());
   };
 
+  /* ---------- text formatting utilities ---------- */
+  const cleanText = (text) => {
+    if (!text) return '';
+    
+    // Remove common LLM artifacts and formatting
+    return text
+      // Remove markdown formatting
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markers
+      .replace(/\*(.*?)\*/g, '$1')     // Remove italic markers
+      .replace(/`(.*?)`/g, '$1')       // Remove code markers
+      .replace(/#{1,6}\s+/g, '')       // Remove heading markers
+      .replace(/^\s*[-*+]\s+/gm, '')   // Remove bullet points
+      .replace(/^\s*\d+\.\s+/gm, '')   // Remove numbered lists
+      // Remove common prefixes and artifacts
+      .replace(/^(Answer:|Question:|Explanation:|Note:|STRENGTHS:|WEAKNESSES:|RECOMMENDATIONS:|DETAILED_FEEDBACK:)/gi, '')
+      .replace(/^[-•*]\s*/gm, '')      // Remove bullet points
+      .replace(/^\d+\.\s*/gm, '')      // Remove numbers
+      .replace(/^[A-D]\)\s*/gm, '')    // Remove option letters
+      // Clean up punctuation and spacing
+      .replace(/\s+/g, ' ')            // Normalize whitespace
+      .replace(/([.!?])\s*([.!?])/g, '$1') // Remove duplicate punctuation
+      .trim();
+  };
+
+  const formatQuestionText = (text) => {
+    const cleaned = cleanText(text);
+    // Ensure it ends with proper punctuation
+    if (cleaned && !cleaned.match(/[.!?]$/)) {
+      return cleaned + '?';
+    }
+    return cleaned;
+  };
+
+  const formatOptionText = (text) => {
+    const cleaned = cleanText(text);
+    // Remove any leading option letters or numbers that might have been missed
+    return cleaned.replace(/^[A-D][\)\.]\s*/i, '').replace(/^\d+[\)\.]\s*/, '');
+  };
+
+  const formatFeedbackText = (text) => {
+    const cleaned = cleanText(text);
+    // Ensure proper sentence structure
+    if (cleaned && !cleaned.match(/[.!?]$/)) {
+      return cleaned + '.';
+    }
+    return cleaned;
+  };
+
+  const formatListItem = (text) => {
+    const cleaned = cleanText(text);
+    // Capitalize first letter and ensure no trailing punctuation for list items
+    if (cleaned) {
+      const formatted = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      return formatted.replace(/[.!?]+$/, ''); // Remove trailing punctuation
+    }
+    return cleaned;
+  };
+
   // Categories View
   if (currentView === 'categories') {
     return (
@@ -335,11 +393,11 @@ export default function SkillAssessment({ onBackToTools }) {
             </div>
             
             <div className="question-content">
-              <p className="question-text">{currentQuestion.question}</p>
+              <p className="question-text">{formatQuestionText(currentQuestion.question)}</p>
               
               {currentQuestion.code_snippet && (
                 <div className="code-snippet">
-                  <pre><code>{currentQuestion.code_snippet}</code></pre>
+                  <pre><code>{cleanText(currentQuestion.code_snippet)}</code></pre>
                 </div>
               )}
             </div>
@@ -352,7 +410,7 @@ export default function SkillAssessment({ onBackToTools }) {
                   onClick={() => handleAnswerSelect(index)}
                 >
                   <span className="option-letter">{String.fromCharCode(65 + index)}</span>
-                  <span className="option-text">{option}</span>
+                  <span className="option-text">{formatOptionText(option)}</span>
                   {userAnswers[currentQuestionIndex] === index && (
                     <CheckCircle size={20} className="selected-icon" />
                   )}
@@ -473,7 +531,7 @@ export default function SkillAssessment({ onBackToTools }) {
               <div className="feedback-section">
                 <h3>📝 Detailed Feedback</h3>
                 <div className="feedback-content">
-                  <p>{results.detailed_feedback}</p>
+                  <p>{formatFeedbackText(results.detailed_feedback)}</p>
                 </div>
               </div>
             )}
@@ -484,8 +542,8 @@ export default function SkillAssessment({ onBackToTools }) {
                 <h4><Star size={16} /> 💪 Your Strengths</h4>
                 {results.strengths && results.strengths.length > 0 ? (
                   <ul>
-                    {formatStrengthsAndWeaknesses(results.strengths).map((strength, index) => (
-                      <li key={index}>✅ {strength}</li>
+                    {results.strengths.map((strength, index) => (
+                      <li key={index}>✅ {formatListItem(strength)}</li>
                     ))}
                   </ul>
                 ) : (
@@ -496,8 +554,8 @@ export default function SkillAssessment({ onBackToTools }) {
                 <h4><Target size={16} /> 🎯 Areas for Growth</h4>
                 {results.weaknesses && results.weaknesses.length > 0 ? (
                   <ul>
-                    {formatStrengthsAndWeaknesses(results.weaknesses).map((area, index) => (
-                      <li key={index}>🔄 {area}</li>
+                    {results.weaknesses.map((area, index) => (
+                      <li key={index}>🔄 {formatListItem(area)}</li>
                     ))}
                   </ul>
                 ) : (
@@ -514,7 +572,7 @@ export default function SkillAssessment({ onBackToTools }) {
                   {results.recommendations.map((recommendation, index) => (
                     <div key={index} className="recommendation-item">
                       <span className="recommendation-number">{index + 1}</span>
-                      <span className="recommendation-text">{recommendation}</span>
+                      <span className="recommendation-text">{formatFeedbackText(recommendation)}</span>
                     </div>
                   ))}
                 </div>

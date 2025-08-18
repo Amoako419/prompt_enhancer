@@ -1,7 +1,7 @@
 import { MessageSquare, GitBranch, Brain, Database, Users, Workflow, Wand2, BarChart3, Award } from 'lucide-react';
 import '../styles/AITools.css';
 
-export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer, onNavigateToSkillAssessment }) {
+export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer, onNavigateToSkillAssessment, onNavigateToPipelineGenerator }) {
   const tools = [
     {
       icon: <Wand2 className="tool-icon" />,
@@ -41,6 +41,12 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
       title: 'Smart Data Exploration',
       description: 'Auto-generate EDA code, statistical analysis, anomaly detection, and data visualization recommendations.',
       onClick: onNavigateToDataExplorer
+    },
+    {
+      icon: <Workflow className="tool-icon" />,
+      title: 'Data Pipeline Test Generator',
+      description: 'Generate realistic test data for data pipeline validation, ETL testing, and performance analysis.',
+      onClick: onNavigateToPipelineGenerator
     }
   ];
 
