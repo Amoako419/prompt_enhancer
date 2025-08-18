@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "data-analysis": {
+      "command": "python",
+      "args": ["main.py"],
+      "env": {}
+    }
+  }
+}
