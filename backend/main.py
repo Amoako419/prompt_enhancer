@@ -4,6 +4,8 @@ import google.generativeai as genai
 import os
 from typing import List
 from dotenv import load_dotenv
+import re
+import json
 
 load_dotenv()
 
@@ -12,6 +14,51 @@ app = FastAPI()
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.0-flash")
+
+# Text formatting utilities
+def clean_llm_text(text):
+    """Clean and format text from LLM responses"""
+    if not text:
+        return ""
+    
+    # Remove markdown formatting
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)  # Remove bold
+    text = re.sub(r'\*(.*?)\*', r'\1', text)      # Remove italic
+    text = re.sub(r'`(.*?)`', r'\1', text)        # Remove code markers
+    text = re.sub(r'#{1,6}\s+', '', text)         # Remove headers
+    
+    # Remove common prefixes
+    prefixes = [
+        r'^(Answer:|Question:|Explanation:|Note:|STRENGTHS:|WEAKNESSES:|RECOMMENDATIONS:|DETAILED_FEEDBACK:)',
+        r'^\s*[-*+]\s+',  # Bullet points
+        r'^\s*\d+\.\s+',  # Numbered lists
+        r'^[A-D]\)\s*',   # Option letters
+    ]
+    
+    for prefix in prefixes:
+        text = re.sub(prefix, '', text, flags=re.IGNORECASE | re.MULTILINE)
+    
+    # Clean up whitespace and punctuation
+    text = re.sub(r'\s+', ' ', text)              # Normalize whitespace
+    text = re.sub(r'([.!?])\s*([.!?])', r'\1', text)  # Remove duplicate punctuation
+    
+    return text.strip()
+
+def format_question_data(questions_data):
+    """Format question data from LLM response"""
+    formatted_questions = []
+    
+    for q in questions_data.get("questions", []):
+        formatted_q = {
+            "question": clean_llm_text(q.get("question", "")),
+            "options": [clean_llm_text(opt) for opt in q.get("options", [])],
+            "correct_answer": q.get("correct_answer", 0),
+            "explanation": clean_llm_text(q.get("explanation", "")),
+            "type": q.get("type", "multiple_choice")
+        }
+        formatted_questions.append(formatted_q)
+    
+    return formatted_questions
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -240,28 +287,28 @@ async def generate_skill_assessment(request: SkillAssessmentRequest):
 
 {category_desc}
 
-For each question, provide:
-1. A clear, challenging question
-2. Four plausible options (A, B, C, D)
-3. The correct answer index (0-3)
-4. A detailed explanation of why the answer is correct
-5. Question type: "multiple_choice", "code_analysis", or "scenario"
+IMPORTANT: Return ONLY valid JSON in the exact format below. Do not include any markdown, explanations, or additional text.
 
-Include a mix of conceptual and practical questions. For code_analysis questions, provide code snippets.
-For scenario questions, present real-world situations.
-
-Return the response in this exact JSON format:
 {{
     "questions": [
         {{
-            "question": "Question text here",
-            "options": ["Option A", "Option B", "Option C", "Option D"],
-            "correct_answer": 0,
-            "explanation": "Detailed explanation here",
+            "question": "What is the primary purpose of pandas in Python data science?",
+            "options": ["Web development", "Data manipulation and analysis", "Game development", "System administration"],
+            "correct_answer": 1,
+            "explanation": "pandas is specifically designed for data manipulation and analysis tasks in Python.",
             "type": "multiple_choice"
         }}
     ]
-}}"""
+}}
+
+Generate {request.num_questions} questions following this exact format. Each question should be:
+- Clear and specific to {request.category}
+- Appropriate for {request.difficulty} level
+- Have 4 realistic options
+- Include correct_answer as index (0-3)
+- Provide detailed explanation
+
+Return only the JSON object, no additional text or formatting."""
 
         response = model.generate_content(instruction)
         response_text = response.text.strip()
@@ -277,18 +324,67 @@ Return the response in this exact JSON format:
         import json
         try:
             questions_data = json.loads(response_text)
-            questions = [Question(**q) for q in questions_data["questions"]]
-        except (json.JSONDecodeError, KeyError):
-            # Fallback to creating sample questions if parsing fails
-            questions = [
-                Question(
-                    question=f"Sample {request.category} question for {request.difficulty} level",
-                    options=["Option A", "Option B", "Option C", "Option D"],
-                    correct_answer=0,
-                    explanation="This is a sample explanation.",
-                    type="multiple_choice"
-                )
-            ] * request.num_questions
+            formatted_questions = format_question_data(questions_data)
+            questions = [Question(**q) for q in formatted_questions]
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Response text: {response_text[:500]}...")
+            
+            # Try to extract questions manually if JSON parsing fails
+            questions = []
+            if "question" in response_text.lower():
+                # Try manual parsing for common AI response patterns
+                import re
+                
+                # Pattern to match question blocks
+                question_pattern = r'"question":\s*"([^"]*)".*?"options":\s*\[(.*?)\].*?"correct_answer":\s*(\d+).*?"explanation":\s*"([^"]*)"'
+                matches = re.findall(question_pattern, response_text, re.DOTALL)
+                
+                for match in matches[:request.num_questions]:
+                    question_text, options_text, correct_answer, explanation = match
+                    # Parse options
+                    options_matches = re.findall(r'"([^"]*)"', options_text)
+                    if len(options_matches) >= 4:
+                        questions.append(Question(
+                            question=clean_llm_text(question_text),
+                            options=[clean_llm_text(opt) for opt in options_matches[:4]],
+                            correct_answer=int(correct_answer),
+                            explanation=clean_llm_text(explanation),
+                            type="multiple_choice"
+                        ))
+            
+            # If manual parsing also fails, create meaningful fallback questions
+            if not questions:
+                fallback_questions = {
+                    "Python for Data Science": [
+                        {
+                            "question": "Which library is primarily used for data manipulation in Python?",
+                            "options": ["pandas", "matplotlib", "requests", "os"],
+                            "correct_answer": 0,
+                            "explanation": "pandas is the primary library for data manipulation and analysis in Python.",
+                            "type": "multiple_choice"
+                        },
+                        {
+                            "question": "What method is used to read a CSV file in pandas?",
+                            "options": ["read_csv()", "load_csv()", "import_csv()", "get_csv()"],
+                            "correct_answer": 0,
+                            "explanation": "pandas.read_csv() is the standard method to read CSV files into a DataFrame.",
+                            "type": "multiple_choice"
+                        }
+                    ],
+                    "SQL and Databases": [
+                        {
+                            "question": "Which SQL clause is used to filter rows?",
+                            "options": ["SELECT", "WHERE", "ORDER BY", "GROUP BY"],
+                            "correct_answer": 1,
+                            "explanation": "The WHERE clause is used to filter rows based on specified conditions.",
+                            "type": "multiple_choice"
+                        }
+                    ]
+                }
+                
+                category_questions = fallback_questions.get(request.category, fallback_questions["Python for Data Science"])
+                questions = [Question(**q) for q in category_questions * (request.num_questions // len(category_questions) + 1)][:request.num_questions]
         
         duration_map = {"beginner": 2, "intermediate": 3, "advanced": 4}
         duration = duration_map.get(request.difficulty, 3) * request.num_questions
@@ -358,25 +454,26 @@ Base your feedback on the {request.category} domain and {request.difficulty} dif
         if "STRENGTHS:" in feedback_text:
             try:
                 strengths_section = feedback_text.split("STRENGTHS:")[1].split("WEAKNESSES:")[0].strip()
-                strengths = [s.strip("- ").strip() for s in strengths_section.split("\n") if s.strip()]
+                strengths = [clean_llm_text(s.strip("- ").strip()) for s in strengths_section.split("\n") if s.strip()]
             except:
                 pass
         
         if "WEAKNESSES:" in feedback_text:
             try:
                 weaknesses_section = feedback_text.split("WEAKNESSES:")[1].split("RECOMMENDATIONS:")[0].strip()
-                weaknesses = [w.strip("- ").strip() for w in weaknesses_section.split("\n") if w.strip()]
+                weaknesses = [clean_llm_text(w.strip("- ").strip()) for w in weaknesses_section.split("\n") if w.strip()]
             except:
                 pass
         
         if "RECOMMENDATIONS:" in feedback_text:
             try:
                 recommendations_section = feedback_text.split("RECOMMENDATIONS:")[1].split("DETAILED_FEEDBACK:")[0].strip()
-                recommendations = [r.strip("- ").strip() for r in recommendations_section.split("\n") if r.strip()]
+                recommendations = [clean_llm_text(r.strip("- ").strip()) for r in recommendations_section.split("\n") if r.strip()]
             except:
                 pass
         
         detailed_feedback = feedback_text if "DETAILED_FEEDBACK:" not in feedback_text else feedback_text.split("DETAILED_FEEDBACK:")[1].strip()
+        detailed_feedback = clean_llm_text(detailed_feedback)
         
         return EvaluationResponse(
             score=score,
