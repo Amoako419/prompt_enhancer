@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { 
   Wand2, RotateCw, Check, X, Send, ArrowLeft, History, 
-  Star, Search, Filter, Trash2, Copy, BookOpen, Tag
+  Star, Search, Filter, Trash2, Copy, BookOpen, Tag,
+  Mic, Plus, Settings
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import "../App.css";
-import "../styles/PromptEnhancer.css";
+import "../styles/PromptEnhancerModern.css";
 
 export default function PromptEnhancer({ onBackToTools }) {
   /* ---------- chat state ---------- */

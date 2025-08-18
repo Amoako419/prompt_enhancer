@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AITools from './components/AITools';
-import PromptEnhancer from './components/PromptEnhancer';
+import PromptEnhancerSimple from './components/PromptEnhancerSimple';
 import SqlConverter from './components/SqlConverter';
 import DataExplorer from './components/DataExplorer';
 import SkillAssessment from './components/SkillAssessment';
@@ -23,7 +23,7 @@ export default function App() {
   }
 
   if (currentView === 'enhancer') {
-    return <PromptEnhancer onBackToTools={() => setCurrentView('tools')} />;
+    return <PromptEnhancerSimple onBackToTools={() => setCurrentView('tools')} />;
   }
 
   if (currentView === 'sqlConverter') {
