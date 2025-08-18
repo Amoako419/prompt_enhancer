@@ -1,7 +1,7 @@
-import { MessageSquare, GitBranch, Brain, Database, Users, Workflow, Wand2, BarChart3, Award } from 'lucide-react';
+import { MessageSquare, GitBranch, Brain, Database, Users, Workflow, Wand2, BarChart3, Award, Server } from 'lucide-react';
 import '../styles/AITools.css';
 
-export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer, onNavigateToSkillAssessment, onNavigateToPipelineGenerator }) {
+export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter, onNavigateToDataExplorer, onNavigateToSkillAssessment, onNavigateToPipelineGenerator, onNavigateToMCPAnalysis }) {
   const tools = [
     {
       icon: <Wand2 className="tool-icon" />,
@@ -47,6 +47,12 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
       title: 'Data Pipeline Test Generator',
       description: 'Generate realistic test data for data pipeline validation, ETL testing, and performance analysis.',
       onClick: onNavigateToPipelineGenerator
+    },
+    {
+      icon: <Server className="tool-icon" />,
+      title: 'MCP Data Analysis',
+      description: 'Advanced data analysis using Model Context Protocol server. Statistical analysis, ML, and interactive visualizations.',
+      onClick: onNavigateToMCPAnalysis
     }
   ];
 
