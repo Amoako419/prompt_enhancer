@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--bg-color);
+  background: var(--bg-primary);
 }
 
 .explorer-container {
@@ -20,22 +20,25 @@
 }
 
 .analysis-selector {
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .analysis-selector h3 {
   margin: 0 0 1rem 0;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .analysis-types {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
+  align-items: stretch;
 }
 
 .analysis-type-btn {
@@ -43,23 +46,27 @@
   align-items: flex-start;
   gap: 0.75rem;
   padding: 1rem;
-  background: #fafafa;
+  background: var(--bg-secondary);
   border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  min-height: 80px;
+  height: 100%;
 }
 
 .analysis-type-btn:hover {
   border-color: var(--primary-color);
-  background: #f0f7ff;
+  background: var(--bg-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .analysis-type-btn.active {
   border-color: var(--primary-color);
-  background: #e6f3ff;
-  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.1);
+  background: var(--bg-accent);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .analysis-type-btn svg {
@@ -70,21 +77,22 @@
 
 .type-label {
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .type-description {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1.3;
 }
 
 .input-section, .output-section, .examples-section {
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
@@ -101,9 +109,10 @@
 
 .section-header h3 {
   margin: 0;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-size: 1.1rem;
   flex: 1;
+  font-weight: 600;
 }
 
 .description-input {
@@ -116,12 +125,18 @@
   font-size: 0.95rem;
   resize: vertical;
   line-height: 1.5;
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+.description-input::placeholder {
+  color: var(--input-placeholder);
 }
 
 .description-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .input-actions {
@@ -145,7 +160,9 @@
 }
 
 .generate-btn:hover:not(:disabled) {
-  background: #0052cc;
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .generate-btn:disabled {
@@ -155,17 +172,19 @@
 
 .clear-btn {
   padding: 0.75rem 1.5rem;
-  background: transparent;
-  color: #666;
+  background: var(--button-bg);
+  color: var(--button-text);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .clear-btn:hover:not(:disabled) {
-  background: #f5f5f5;
-  border-color: #999;
+  background: var(--button-hover-bg);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
 }
 
 .output-actions {
@@ -189,12 +208,14 @@
 }
 
 .action-btn:hover {
-  background: #0052cc;
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .code-output {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1rem;
   overflow-x: auto;
@@ -211,13 +232,14 @@
 }
 
 .code-output code {
-  color: #2d3748;
+  color: var(--text-primary);
   background: none;
 }
 
 .examples-section h3 {
   margin-bottom: 1rem;
-  color: #1a1a1a;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .examples-grid {
@@ -232,13 +254,15 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #fafafa;
+  background: var(--bg-secondary);
+  height: 100%;
 }
 
 .example-card:hover {
   border-color: var(--primary-color);
-  background: #f0f7ff;
+  background: var(--bg-accent);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .example-card strong {
@@ -246,10 +270,11 @@
   margin-bottom: 0.5rem;
   color: var(--primary-color);
   font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .example-card span {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   line-height: 1.4;
   display: block;
@@ -289,5 +314,14 @@
   .output-actions {
     margin-left: 0;
     margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .analysis-type-btn {
+    min-height: 60px;
+  }
+  
+  .hero-title {
+    font-size: 1.5rem;
   }
 }

@@ -3,12 +3,13 @@
   display: flex;
   height: 100vh;
   position: relative;
+  background-color: var(--bg-primary);
 }
 
 /* History Panel */
 .history-panel {
   width: 400px;
-  background: white;
+  background: var(--card-bg);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -22,7 +23,7 @@
   align-items: center;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
-  background: #f8f9fa;
+  background: var(--bg-secondary);
 }
 
 .history-header h3 {
@@ -30,7 +31,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #2d3748;
+  color: var(--text-primary);
   font-size: 1.1rem;
 }
 
@@ -40,19 +41,19 @@
   padding: 0.5rem;
   cursor: pointer;
   border-radius: 6px;
-  color: #666;
+  color: var(--text-secondary);
   transition: all 0.2s ease;
 }
 
 .close-panel-btn:hover {
-  background: #e9ecef;
-  color: #333;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 /* History Controls */
 .history-controls {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .search-box {
@@ -65,23 +66,28 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #666;
+  color: var(--text-muted);
 }
 
 .search-box input {
   width: 100%;
   padding: 0.75rem 0.75rem 0.75rem 2.5rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
-  background: white;
+  background: var(--input-bg);
+  color: var(--input-text);
   transition: border-color 0.2s ease;
 }
 
 .search-box input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-box input::placeholder {
+  color: var(--input-placeholder);
 }
 
 .filter-tabs {
@@ -91,8 +97,9 @@
 
 .filter-tabs button {
   padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--border-color);
+  background: var(--button-bg);
+  color: var(--button-text);
   border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
@@ -103,13 +110,13 @@
 }
 
 .filter-tabs button:hover {
-  background: #f8f9fa;
-  border-color: #d0d7de;
+  background: var(--button-hover-bg);
+  border-color: var(--border-hover);
 }
 
 .filter-tabs button.active {
   background: var(--primary-color);
-  color: white;
+  color: var(--text-inverse);
   border-color: var(--primary-color);
 }
 
@@ -127,7 +134,7 @@
   justify-content: center;
   padding: 3rem 2rem;
   text-align: center;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .empty-history svg {

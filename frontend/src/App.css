@@ -1,36 +1,29 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* App-specific styles using theme variables */
+.app {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
-:root {
-  --primary-color: #0066ff;
-  --bg-color: #f5f7fb;
-  --border-color: #e2e8f0;
-}
-
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg-color);
-  color: #1a1a1a;
-}
+/* Chat Components */
 .chat-wrapper {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  background-color: var(--bg-primary);
 }
+
 .chat-header {
   padding: 16px 24px;
   background: var(--primary-color);
-  color: #fff;
+  color: var(--text-inverse);
   font-weight: 600;
   font-size: 1.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   position: relative;
 }
 
@@ -39,13 +32,14 @@ body {
   left: 16px;
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-inverse);
   cursor: pointer;
   padding: 8px;
   border-radius: 8px;
   display: flex;
   align-items: center;
-  transition: background-color 0.2s ease;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
 }
 
 .back-btn:hover {
@@ -62,37 +56,42 @@ body {
   max-width: 100%;
   margin: 0 auto;
   width: 100%;
+  background-color: var(--bg-primary);
 }
+
 .msg {
   max-width: 85%;
   padding: 12px 16px;
   border-radius: 12px;
   line-height: 1.5;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   font-size: 0.95rem;
 }
 
 .msg.user {
   align-self: flex-end;
   background: var(--primary-color);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .msg.assistant {
   align-self: flex-start;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 /* Markdown Styling */
 .msg p {
   margin: 0 0 1em;
+  color: inherit;
 }
 .msg p:last-child {
   margin-bottom: 0;
 }
 .msg h1, .msg h2, .msg h3, .msg h4 {
   margin: 1em 0 0.5em;
+  color: inherit;
 }
 .msg ul, .msg ol {
   margin: 0.5em 0;
@@ -102,7 +101,8 @@ body {
   margin: 0.25em 0;
 }
 .msg .inline-code {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-family: monospace;
@@ -110,13 +110,15 @@ body {
 }
 .msg .code-block {
   display: block;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   padding: 1em;
   border-radius: 6px;
   font-family: monospace;
   font-size: 0.9em;
   white-space: pre-wrap;
   margin: 0.5em 0;
+  border: 1px solid var(--border-color);
 }
 
 /* ---------- input ---------- */
@@ -124,7 +126,7 @@ body {
   display: flex;
   gap: 12px;
   padding: 16px 24px;
-  background: #fff;
+  background: var(--card-bg);
   border-top: 1px solid var(--border-color);
   position: relative;
   max-width: 900px;
@@ -146,11 +148,17 @@ body {
   font-size: 0.95rem;
   line-height: 1.5;
   transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+}
+
+.input-wrapper textarea::placeholder {
+  color: var(--input-placeholder);
 }
 
 .input-wrapper textarea:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: var(--border-focus);
   box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.1);
 }
 .enhance-btn {

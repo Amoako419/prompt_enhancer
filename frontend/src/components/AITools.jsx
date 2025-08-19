@@ -5,8 +5,8 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
   const tools = [
     {
       icon: <Wand2 className="tool-icon" />,
-      title: 'Prompt Enhancer',
-      description: 'Enhance your prompts with AI assistance. Make your prompts more effective and get better results.',
+      title: '🎯 Prompt Enhancer',
+      description: '💡 Transform basic prompts into powerful AI instructions. Generate precise, context-aware prompts that deliver consistent, high-quality results for data analysis tasks.',
       onClick: onNavigateToEnhancer
     },
     // {
@@ -21,8 +21,8 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
     // },
     {
       icon: <Brain className="tool-icon" />,
-      title: 'Skill Assessment',
-      description: 'Evaluate your data science and engineering skills with interactive quizzes and hands-on challenges.',
+      title: '🧠 Skill Assessment Hub',
+      description: '📊 Evaluate and benchmark your data science expertise through adaptive assessments. Get personalized learning paths and skill gap analysis with industry-standard metrics.',
       onClick: onNavigateToSkillAssessment
     },
     // {
@@ -32,26 +32,26 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
     // },
     {
       icon: <Database className="tool-icon" />,
-      title: 'English to SQL',
-      description: 'Convert plain English queries into SQL statements. Perfect for database operations and data analysis.',
+      title: '🔍 Natural Language to SQL',
+      description: '⚡ Convert plain English queries into optimized SQL statements instantly. Perfect for data analysts who need quick database insights without complex syntax.',
       onClick: onNavigateToSqlConverter
     },
     {
       icon: <BarChart3 className="tool-icon" />,
-      title: 'Smart Data Exploration',
-      description: 'Auto-generate EDA code, statistical analysis, anomaly detection, and data visualization recommendations.',
+      title: '📈 Smart Data Explorer',
+      description: '🚀 AI-powered exploratory data analysis with automated insights, statistical summaries, anomaly detection, and publication-ready visualizations in seconds.',
       onClick: onNavigateToDataExplorer
     },
     {
       icon: <Workflow className="tool-icon" />,
-      title: 'Data Pipeline Test Generator',
-      description: 'Generate realistic test data for data pipeline validation, ETL testing, and performance analysis.',
+      title: '🛠️ Data Pipeline Test Generator',
+      description: '🎲 Generate realistic, diverse test datasets for pipeline validation, ETL testing, and performance benchmarking. Ensure data quality with smart edge cases.',
       onClick: onNavigateToPipelineGenerator
     },
     {
       icon: <Server className="tool-icon" />,
-      title: 'MCP Data Analysis',
-      description: 'Advanced data analysis using Model Context Protocol server. Statistical analysis, ML, and interactive visualizations.',
+      title: '⚙️ MCP Data Analysis',
+      description: '🔬 Advanced statistical analysis powered by Model Context Protocol. Perform correlation analysis, hypothesis testing, and machine learning with enterprise-grade accuracy.',
       onClick: onNavigateToMCPAnalysis
     }
   ];
@@ -59,7 +59,17 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
   return (
     <div className="tools-container">
       <header className="tools-header">
-        <h1>Available AI Tools</h1>
+        <div className="hero-section">
+          <h1 className="hero-title">
+            Professional AI Tools Suite
+            <span className="title-gradient"> for Data Professionals</span>
+          </h1>
+          <p className="hero-subtitle">
+            ⚡ Supercharge your data workflow with cutting-edge AI tools designed for analysts, engineers, and scientists.
+            <br />
+            <span className="stats-highlight">📈 Boost productivity by 300% | 🎯 Reduce analysis time by 80% | 💡 Unlock insights faster</span>
+          </p>
+        </div>
       </header>
       <div className="tools-grid">
         {tools.map((tool, index) => (
