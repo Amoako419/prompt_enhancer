@@ -249,24 +249,7 @@ MIT License © 2025
 
 **🎯 Built for data professionals** | [Report Issues](https://github.com/amoako419/prompt-enhancer/issues)
 
-API Endpoints
--------------
-| Method | Endpoint | Body | Response |
-|--------|----------|------|----------|
-| POST   | `/enhance` | `{"prompt": "raw text"}` | `{"enhanced_prompt": "..."}` |
-| POST   | `/chat`    | `{"history": [{"role":"user", "text":"..."}]}` | `{"reply": "..."}` |
 
-Environment Variables
----------------------
-| Variable | Purpose |
-|----------|---------|
-| `GEMINI_API_KEY` | Google Gemini API key (required) |
-
-Deployment Tips
----------------
-- **Backend**: Render, Railway, Fly.io, or any VPS (`uvicorn main:app --host 0.0.0.0 --port $PORT`)  
-- **Frontend**: Vercel, Netlify, or build static files (`npm run build`) and serve from backend (`/static` mount).  
-- Remember to set `GEMINI_API_KEY` in the host’s environment variables.
 
 Contributing
 ------------
