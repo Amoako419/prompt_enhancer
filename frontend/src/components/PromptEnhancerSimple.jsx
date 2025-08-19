@@ -13,19 +13,6 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
   const [loadingReply, setLoadingReply] = useState(false);
   const [enhanced, setEnhanced] = useState("");
   const [showDialog, setShowDialog] = useState(false);
-  const [promptHistory, setPromptHistory] = useState([]);
-
-  // Add prompt to history
-  const addToHistory = (originalPrompt, enhancedPrompt = null) => {
-    const historyEntry = {
-      id: Date.now(),
-      originalPrompt,
-      enhancedPrompt,
-      timestamp: new Date().toLocaleString(),
-      isEnhanced: !!enhancedPrompt
-    };
-    setPromptHistory(prev => [historyEntry, ...prev]);
-  };
 
   // Direct submit without enhancement
   const handleDirectSubmit = async () => {
@@ -33,10 +20,6 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
     
     const userMessage = { role: "user", content: input };
     setMessages(prev => [...prev, userMessage]);
-    
-    // Add to history
-    addToHistory(input);
-    
     setInput("");
     setLoadingReply(true);
 
@@ -89,10 +72,6 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
   const handleAcceptEnhancement = async () => {
     const userMessage = { role: "user", content: enhanced }; // Use enhanced prompt
     setMessages(prev => [...prev, userMessage]);
-    
-    // Add both original and enhanced prompt to history
-    addToHistory(input, enhanced);
-    
     setShowDialog(false);
     setInput("");
     setLoadingReply(true);
@@ -171,34 +150,9 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
                 </div>
               </div>
               <div className="sidebar-content">
-                {promptHistory.length === 0 ? (
-                  <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>
-                    No prompts yet
-                  </div>
-                ) : (
-                  <div className="history-list">
-                    {promptHistory.map((entry) => (
-                      <div key={entry.id} className="history-item" onClick={() => setInput(entry.enhancedPrompt || entry.originalPrompt)}>
-                        <div className="history-item-header">
-                          <span className={`history-badge ${entry.isEnhanced ? 'enhanced' : 'original'}`}>
-                            {entry.isEnhanced ? 'Enhanced' : 'Original'}
-                          </span>
-                          <span className="history-timestamp">{entry.timestamp}</span>
-                        </div>
-                        <div className="history-item-content">
-                          {(entry.enhancedPrompt || entry.originalPrompt).substring(0, 60)}
-                          {(entry.enhancedPrompt || entry.originalPrompt).length > 60 ? '...' : ''}
-                        </div>
-                        {entry.isEnhanced && (
-                          <div className="history-item-original">
-                            Original: {entry.originalPrompt.substring(0, 40)}
-                            {entry.originalPrompt.length > 40 ? '...' : ''}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>
+                  No prompts yet
+                </div>
               </div>
             </div>
           )}

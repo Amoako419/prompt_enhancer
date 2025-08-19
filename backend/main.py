@@ -1,12 +1,17 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 import os
-from typing import List
+from typing import List, Optional, Any, Dict
 from dotenv import load_dotenv
 import re
 import json
+import pandas as pd
+import numpy as np
+import io
+import subprocess
+import tempfile
 
 load_dotenv()
 
@@ -23,6 +28,27 @@ app.add_middleware(
 
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-2.0-flash")
+
+# Utility function to convert numpy types to native Python types
+def convert_numpy_types(obj: Any) -> Any:
+    """Convert numpy types to native Python types for JSON serialization"""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif hasattr(obj, 'item'):  # For numpy scalars
+        return obj.item()
+    else:
+        return obj
 model = genai.GenerativeModel("gemini-2.0-flash")
 
 # Text formatting utilities
@@ -178,6 +204,16 @@ class DataPipelineResponse(BaseModel):
     data: str
     preview: str
     metadata: dict
+
+class MCPAnalysisRequest(BaseModel):
+    analysis_type: str
+    file_data: Optional[str] = None
+    parameters: dict = {}
+
+class MCPAnalysisResponse(BaseModel):
+    status: str
+    results: dict
+    visualizations: List[dict] = []
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
@@ -734,6 +770,558 @@ async def generate_pipeline_data(req: DataPipelineRequest):
     except Exception as e:
         print(f"Pipeline data generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate pipeline data: {str(e)}")
+
+@app.get("/mcp/health")
+async def mcp_health_check():
+    """
+    Check if MCP services are available
+    """
+    return {"status": "connected", "message": "MCP proxy is running"}
+
+@app.post("/mcp/load-data")
+async def mcp_load_data(file: UploadFile = File(...)):
+    """
+    Load and preview data file
+    """
+    try:
+        # Read file content
+        content = await file.read()
+        
+        # Process based on file type
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(io.StringIO(content.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        
+        results = {
+            "title": "Data Loading Summary",
+            "content": f"""📁 File: {file.filename}
+📊 Dataset Shape: {df.shape[0]} rows × {df.shape[1]} columns
+
+📋 Column Information:
+{chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
+
+🔍 Data Preview (First 5 rows):
+{df.head().to_string()}
+
+⚠️ Missing Values:
+{chr(10).join([f"  • {col}: {count} missing" for col, count in df.isnull().sum().items() if count > 0]) or "  • No missing values found"}
+
+💾 Memory Usage: {df.memory_usage(deep=True).sum() / 1024:.1f} KB""",
+            "data": convert_numpy_types({
+                "shape": df.shape,
+                "columns": df.columns.tolist(),
+                "preview": df.head().to_dict()
+            })
+        }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=[]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load data: {str(e)}")
+
+@app.post("/mcp/descriptive-stats")
+async def mcp_descriptive_stats(file: UploadFile = File(...)):
+    """
+    Generate descriptive statistics for numeric columns
+    """
+    try:
+        content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(io.StringIO(content.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        
+        numeric_df = df.select_dtypes(include=['number'])
+        if not numeric_df.empty:
+            stats_summary = numeric_df.describe()
+            
+            formatted_stats = []
+            for col in stats_summary.columns:
+                col_stats = stats_summary[col]
+                formatted_stats.append(f"""
+📊 {col}:
+  • Count: {col_stats['count']:.0f} values
+  • Mean: {col_stats['mean']:.2f}
+  • Median (50%): {col_stats['50%']:.2f}
+  • Std Dev: {col_stats['std']:.2f}
+  • Min: {col_stats['min']:.2f}
+  • Max: {col_stats['max']:.2f}
+  • Range: {col_stats['max'] - col_stats['min']:.2f}""")
+            
+            results = {
+                "title": "Descriptive Statistics Summary",
+                "content": f"""📈 Statistical Analysis for {len(numeric_df.columns)} numeric columns:
+
+{chr(10).join(formatted_stats)}
+
+📋 Summary:
+  • Total numeric columns: {len(numeric_df.columns)}
+  • Total records: {len(df)}
+  • Columns analyzed: {', '.join(numeric_df.columns.tolist())}""",
+                "data": convert_numpy_types({
+                    "statistics": stats_summary.to_dict(),
+                    "numeric_columns": numeric_df.columns.tolist()
+                })
+            }
+        else:
+            results = {
+                "title": "No Numeric Data Found",
+                "content": "❌ Error: No numeric columns found for statistical analysis.\n\nAvailable columns:\n" + 
+                         "\n".join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()]),
+                "error": True
+            }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=[]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate statistics: {str(e)}")
+
+@app.post("/mcp/correlation-analysis")
+async def mcp_correlation_analysis(file: UploadFile = File(...)):
+    """
+    Perform correlation analysis on numeric columns
+    """
+    try:
+        content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(io.StringIO(content.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        
+        numeric_df = df.select_dtypes(include=['number'])
+        if len(numeric_df.columns) >= 2:
+            corr_matrix = numeric_df.corr()
+            
+            # Find strong correlations
+            strong_correlations = []
+            for i in range(len(corr_matrix.columns)):
+                for j in range(i+1, len(corr_matrix.columns)):
+                    col1, col2 = corr_matrix.columns[i], corr_matrix.columns[j]
+                    corr_val = corr_matrix.iloc[i, j]
+                    if abs(corr_val) > 0.5:
+                        strength = "Very Strong" if abs(corr_val) > 0.8 else "Strong" if abs(corr_val) > 0.6 else "Moderate"
+                        direction = "Positive" if corr_val > 0 else "Negative"
+                        strong_correlations.append(f"  • {col1} ↔ {col2}: {corr_val:.3f} ({strength} {direction})")
+            
+            # Format correlation matrix for display
+            corr_display = []
+            for col in corr_matrix.columns:
+                row_values = [f"{corr_matrix.loc[col, other_col]:.3f}" for other_col in corr_matrix.columns]
+                corr_display.append(f"  {col:<15} | " + " | ".join(f"{val:>8}" for val in row_values))
+            
+            results = {
+                "title": "Correlation Analysis Results",
+                "content": f"""🔗 Correlation Analysis for {len(numeric_df.columns)} numeric variables:
+
+📊 Correlation Matrix:
+  {'Variable':<15} | {' | '.join(f'{col:>8}' for col in corr_matrix.columns)}
+  {'-' * (15 + len(corr_matrix.columns) * 11)}
+{chr(10).join(corr_display)}
+
+🎯 Notable Correlations (|r| > 0.5):
+{chr(10).join(strong_correlations) if strong_correlations else "  • No strong correlations found (all |r| ≤ 0.5)"}
+
+💡 Interpretation Guide:
+  • |r| > 0.8: Very strong correlation
+  • |r| > 0.6: Strong correlation  
+  • |r| > 0.3: Moderate correlation
+  • |r| ≤ 0.3: Weak correlation""",
+                "data": convert_numpy_types({
+                    "correlation_matrix": corr_matrix.to_dict(),
+                    "strong_correlations": [
+                        {"variables": [corr_matrix.columns[i], corr_matrix.columns[j]], 
+                         "correlation": float(corr_matrix.iloc[i, j])}
+                        for i in range(len(corr_matrix.columns))
+                        for j in range(i+1, len(corr_matrix.columns))
+                        if abs(corr_matrix.iloc[i, j]) > 0.5
+                    ]
+                })
+            }
+        else:
+            results = {
+                "title": "Insufficient Data for Correlation",
+                "content": f"""❌ Error: Need at least 2 numeric columns for correlation analysis.
+
+Available columns:
+{chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
+
+Numeric columns found: {len(numeric_df.columns)}""",
+                "error": True
+            }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=[]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to perform correlation analysis: {str(e)}")
+
+@app.post("/mcp/visualization")
+async def mcp_visualization(file: UploadFile = File(...)):
+    """
+    Generate data visualizations
+    """
+    try:
+        content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(io.StringIO(content.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        
+        visualizations = []
+        
+        try:
+            import matplotlib
+            matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
+            import base64
+            from io import BytesIO
+            
+            numeric_cols = df.select_dtypes(include=['number']).columns
+            if len(numeric_cols) > 0:
+                n_plots = min(3, len(numeric_cols))
+                fig, axes = plt.subplots(1, n_plots, figsize=(5*n_plots, 4))
+                if n_plots == 1:
+                    axes = [axes]
+                
+                for i, col in enumerate(numeric_cols[:n_plots]):
+                    ax = axes[i] if n_plots > 1 else axes[0]
+                    ax.hist(df[col].dropna(), bins=20, alpha=0.7, color='skyblue', edgecolor='black')
+                    ax.set_title(f'Distribution of {col}', fontsize=12, fontweight='bold')
+                    ax.set_xlabel(col)
+                    ax.set_ylabel('Frequency')
+                    ax.grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                
+                buffer = BytesIO()
+                plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                buffer.seek(0)
+                image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                plt.close()
+                
+                visualizations.append({
+                    "title": "Data Distribution Histograms",
+                    "image": image_base64,
+                    "type": "histogram"
+                })
+                
+                results = {
+                    "title": "Data Visualization Generated",
+                    "content": f"""📊 Visualization Summary:
+
+✅ Successfully created distribution plots for {n_plots} numeric columns:
+{chr(10).join([f"  • {col}: {len(df[col].dropna())} values plotted" for col in numeric_cols[:n_plots]])}
+
+📈 Chart Details:
+  • Chart Type: Histograms (20 bins each)
+  • Columns Visualized: {', '.join(numeric_cols[:n_plots])}
+  • Missing Values: Excluded from plots
+  • Image Format: PNG (high resolution)
+
+💡 Insights:
+{chr(10).join([f"  • {col}: Range from {df[col].min():.2f} to {df[col].max():.2f}" for col in numeric_cols[:n_plots]])}""",
+                    "data": convert_numpy_types({
+                        "columns_plotted": numeric_cols[:n_plots].tolist(),
+                        "total_numeric_columns": len(numeric_cols)
+                    })
+                }
+            else:
+                results = {
+                    "title": "No Numeric Data for Visualization",
+                    "content": f"""❌ Error: No numeric columns found for visualization.
+
+Available columns:
+{chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
+
+💡 Suggestion: Ensure your dataset contains numeric columns for visualization.""",
+                    "error": True
+                }
+                
+        except ImportError as e:
+            results = {
+                "title": "Visualization Library Error",
+                "content": f"""❌ Error: Required visualization libraries not available.
+                
+Error details: {str(e)}
+
+💡 Solution: Install required packages:
+  pip install matplotlib seaborn""",
+                "error": True
+            }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=visualizations
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate visualizations: {str(e)}")
+
+@app.post("/mcp/hypothesis-testing")
+async def mcp_hypothesis_testing(file: UploadFile = File(...)):
+    """
+    Perform hypothesis testing (normality tests)
+    """
+    try:
+        content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(io.StringIO(content.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        if len(numeric_cols) >= 1:
+            try:
+                from scipy import stats
+                
+                test_results = []
+                for col in numeric_cols[:3]:
+                    data = df[col].dropna()
+                    
+                    if len(data) > 3:
+                        stat, p_value = stats.shapiro(data)
+                        interpretation = "normally distributed" if p_value > 0.05 else "not normally distributed"
+                        
+                        test_results.append(f"""
+📊 {col}:
+  • Sample size: {len(data)} values
+  • Test statistic: {stat:.4f}
+  • P-value: {p_value:.6f}
+  • Result: Data appears {interpretation} (α = 0.05)
+  • Mean: {data.mean():.3f}
+  • Std Dev: {data.std():.3f}""")
+                    else:
+                        test_results.append(f"""
+📊 {col}:
+  • Sample size: {len(data)} values
+  • Status: ❌ Insufficient data (need > 3 values)""")
+                
+                results = {
+                    "title": "Hypothesis Testing Results",
+                    "content": f"""🧪 Shapiro-Wilk Normality Test Results:
+
+{chr(10).join(test_results)}
+
+📋 Test Summary:
+  • Test Type: Shapiro-Wilk Normality Test
+  • Null Hypothesis (H₀): Data is normally distributed
+  • Alternative Hypothesis (H₁): Data is not normally distributed
+  • Significance Level: α = 0.05
+
+💡 Interpretation:
+  • P-value > 0.05: Fail to reject H₀ (data appears normal)
+  • P-value ≤ 0.05: Reject H₀ (data appears non-normal)
+  
+🔬 Columns tested: {', '.join(numeric_cols[:3])}""",
+                    "data": convert_numpy_types({
+                        "test_results": [
+                            {
+                                "column": col,
+                                "statistic": float(stats.shapiro(df[col].dropna())[0]) if len(df[col].dropna()) > 3 else None,
+                                "p_value": float(stats.shapiro(df[col].dropna())[1]) if len(df[col].dropna()) > 3 else None,
+                                "sample_size": len(df[col].dropna()),
+                                "is_normal": bool(stats.shapiro(df[col].dropna())[1] > 0.05) if len(df[col].dropna()) > 3 else None
+                            }
+                            for col in numeric_cols[:3]
+                        ]
+                    })
+                }
+                
+            except ImportError:
+                results = {
+                    "title": "Statistical Library Missing",
+                    "content": """❌ Error: SciPy library not available for statistical tests.
+
+💡 Solution: Install required package:
+  pip install scipy
+
+🔬 Available Tests (when SciPy is installed):
+  • Shapiro-Wilk Normality Test
+  • T-tests (one-sample, two-sample)
+  • Chi-square tests
+  • ANOVA tests""",
+                    "error": True
+                }
+        else:
+            results = {
+                "title": "No Numeric Data for Testing",
+                "content": f"""❌ Error: No numeric columns found for hypothesis testing.
+
+Available columns:
+{chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
+
+💡 Suggestion: Ensure your dataset contains numeric columns for statistical testing.""",
+                "error": True
+            }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=[]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to perform hypothesis testing: {str(e)}")
+
+@app.post("/mcp/machine-learning")
+async def mcp_machine_learning(file: UploadFile = File(...)):
+    """
+    Perform machine learning analysis (K-means clustering)
+    """
+    try:
+        content = await file.read()
+        
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(io.StringIO(content.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        if len(numeric_cols) >= 2:
+            try:
+                from sklearn.cluster import KMeans
+                from sklearn.preprocessing import StandardScaler
+                import numpy as np
+                
+                features = df[numeric_cols].dropna()
+                if len(features) >= 3:
+                    scaler = StandardScaler()
+                    features_scaled = scaler.fit_transform(features)
+                    
+                    n_clusters = min(4, max(2, len(features) // 10))
+                    
+                    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+                    clusters = kmeans.fit_predict(features_scaled)
+                    
+                    cluster_info = []
+                    for i in range(n_clusters):
+                        cluster_mask = clusters == i
+                        cluster_size = sum(cluster_mask)
+                        cluster_data = features[cluster_mask]
+                        
+                        cluster_info.append(f"""
+🎯 Cluster {i+1}:
+  • Size: {cluster_size} samples ({cluster_size/len(features)*100:.1f}%)
+  • Characteristics:
+{chr(10).join([f"    - {col}: avg = {cluster_data[col].mean():.2f}" for col in numeric_cols[:3]])}""")
+                    
+                    results = {
+                        "title": "K-Means Clustering Analysis",
+                        "content": f"""🤖 Machine Learning Analysis Results:
+
+📊 Clustering Summary:
+  • Algorithm: K-Means Clustering
+  • Number of clusters: {n_clusters}
+  • Features used: {', '.join(numeric_cols.tolist())}
+  • Samples analyzed: {len(features)}
+  • Inertia (sum of squared distances): {kmeans.inertia_:.2f}
+
+{chr(10).join(cluster_info)}
+
+🔬 Technical Details:
+  • Data preprocessing: StandardScaler (mean=0, std=1)
+  • Initialization: k-means++ (smart centroid selection)
+  • Random state: 42 (reproducible results)
+  • Convergence: {kmeans.n_iter_} iterations
+
+💡 Insights:
+  • Clusters represent groups of similar data points
+  • Lower inertia indicates better cluster cohesion
+  • Each cluster has distinct characteristics in the features""",
+                        "data": convert_numpy_types({
+                            "model_type": "K-Means Clustering",
+                            "n_clusters": n_clusters,
+                            "inertia": float(kmeans.inertia_),
+                            "features_used": numeric_cols.tolist(),
+                            "cluster_distribution": {
+                                f"Cluster {i+1}": int(sum(clusters == i))
+                                for i in range(n_clusters)
+                            },
+                            "n_iterations": int(kmeans.n_iter_)
+                        })
+                    }
+                else:
+                    results = {
+                        "title": "Insufficient Data for ML",
+                        "content": f"""❌ Error: Insufficient data for machine learning analysis.
+
+Data available:
+  • Numeric columns: {len(numeric_cols)}
+  • Complete records: {len(features)}
+  • Required: At least 3 complete records
+
+💡 Suggestion: Ensure you have more data rows with complete numeric values.""",
+                        "error": True
+                    }
+                    
+            except ImportError as e:
+                results = {
+                    "title": "ML Library Missing",
+                    "content": f"""❌ Error: Machine learning libraries not available.
+
+Missing: {str(e)}
+
+💡 Solution: Install required packages:
+  pip install scikit-learn numpy
+
+🤖 Available ML Algorithms (when installed):
+  • K-Means Clustering
+  • Linear/Logistic Regression
+  • Random Forest
+  • Support Vector Machines""",
+                    "error": True
+                }
+        else:
+            results = {
+                "title": "Insufficient Features for ML",
+                "content": f"""❌ Error: Need at least 2 numeric columns for machine learning.
+
+Available columns:
+{chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
+
+Numeric columns found: {len(numeric_cols)}
+
+💡 Suggestion: Ensure your dataset has multiple numeric features for analysis.""",
+                "error": True
+            }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=[]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to perform machine learning analysis: {str(e)}")
 
 from fastapi.middleware.cors import CORSMiddleware
 
