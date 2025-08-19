@@ -251,11 +251,3 @@ MIT License © 2025
 
 
 
-Contributing
-------------
-Pull requests welcome! Please open an issue first for large changes.
-
-License
--------
-MIT © 2024
-
