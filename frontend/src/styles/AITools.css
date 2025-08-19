@@ -5,8 +5,10 @@
 }
 
 .tools-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 3rem;
+  font: small;  font-weight: 600;
+  color: var(--primary-color);
 }
 
 .tools-header h1 {
