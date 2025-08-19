@@ -5,38 +5,53 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
   const tools = [
     {
       icon: <Wand2 className="tool-icon" />,
-      title: 'AI Prompt Enhancer',
-      description: '🎯 Transform basic prompts into precision-engineered instructions. Boost LLM performance by 300% with smart prompt optimization and conversation history.',
+      title: '🎯 Prompt Enhancer',
+      description: '💡 Transform basic prompts into powerful AI instructions. Generate precise, context-aware prompts that deliver consistent, high-quality results for data analysis tasks.',
       onClick: onNavigateToEnhancer
     },
+    // {
+    //   icon: <MessageSquare className="tool-icon" />,
+    //   title: 'AmaliAI Chat',
+    //   description: 'Supports long prompts up to 150k words and file uploads (~200K tokens), ideal for extensive inputs like codebases or books. Powered by Anthropic.'
+    // },
+    // {
+    //   icon: <GitBranch className="tool-icon" />,
+    //   title: 'Code Analysis',
+    //   description: 'Analysis all your code repositories from GitHub'
+    // },
     {
       icon: <Brain className="tool-icon" />,
-      title: 'Data Skills Assessment',
-      description: '📊 Level up your expertise with adaptive challenges. Real-world scenarios in Python, SQL, ML, and statistics. Track progress with detailed analytics.',
+      title: '🧠 Skill Assessment Hub',
+      description: '📊 Evaluate and benchmark your data science expertise through adaptive assessments. Get personalized learning paths and skill gap analysis with industry-standard metrics.',
       onClick: onNavigateToSkillAssessment
     },
+    // {
+    //   icon: <Workflow className="tool-icon" />,
+    //   title: 'Deepseek R1',
+    //   description: 'Deepseek R1 Distill of Llama 70b'
+    // },
     {
       icon: <Database className="tool-icon" />,
-      title: 'Natural Language to SQL',
-      description: '💬 Speak data, get SQL. Convert business questions into optimized queries instantly. Support for complex joins, aggregations, and window functions.',
+      title: '🔍 Natural Language to SQL',
+      description: '⚡ Convert plain English queries into optimized SQL statements instantly. Perfect for data analysts who need quick database insights without complex syntax.',
       onClick: onNavigateToSqlConverter
     },
     {
       icon: <BarChart3 className="tool-icon" />,
-      title: 'Intelligent EDA Studio',
-      description: '🔍 Automated exploratory data analysis that thinks like a senior analyst. Detect patterns, outliers, and generate publication-ready insights in seconds.',
+      title: '📈 Smart Data Explorer',
+      description: '🚀 AI-powered exploratory data analysis with automated insights, statistical summaries, anomaly detection, and publication-ready visualizations in seconds.',
       onClick: onNavigateToDataExplorer
     },
     {
       icon: <Workflow className="tool-icon" />,
-      title: 'Pipeline Test Data Factory',
-      description: '🏭 Generate realistic test datasets for bulletproof pipelines. Schema-aware, constraint-compliant data that mirrors production complexity.',
+      title: '🛠️ Data Pipeline Test Generator',
+      description: '🎲 Generate realistic, diverse test datasets for pipeline validation, ETL testing, and performance benchmarking. Ensure data quality with smart edge cases.',
       onClick: onNavigateToPipelineGenerator
     },
     {
       icon: <Server className="tool-icon" />,
-      title: 'Advanced Analytics Engine',
-      description: '🧠 Enterprise-grade statistical analysis powered by MCP. From hypothesis testing to ML modeling – your personal data science co-pilot.',
+      title: '⚙️ MCP Data Analysis',
+      description: '🔬 Advanced statistical analysis powered by Model Context Protocol. Perform correlation analysis, hypothesis testing, and machine learning with enterprise-grade accuracy.',
       onClick: onNavigateToMCPAnalysis
     }
   ];
@@ -44,14 +59,16 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
   return (
     <div className="tools-container">
       <header className="tools-header">
-        <h1>Data Professional's AI Arsenal</h1>
-        <p className="tools-subtitle">
-          Transform your data workflow with intelligent automation. From prompt optimization to advanced analytics – 
-          <strong> accelerate insights, eliminate repetitive tasks, and unlock the full potential of your data</strong>.
-        </p>
-        <div className="tools-badge">
-          <span className="badge-icon">⚡</span>
-          <span>6 Powerful Tools • Production-Ready • Built for Scale</span>
+        <div className="hero-section">
+          <h1 className="hero-title">
+            🚀 Professional AI Tools Suite
+            <span className="title-gradient"> for Data Professionals</span>
+          </h1>
+          <p className="hero-subtitle">
+            ⚡ Supercharge your data workflow with cutting-edge AI tools designed for analysts, engineers, and scientists.
+            <br />
+            <span className="stats-highlight">📈 Boost productivity by 300% | 🎯 Reduce analysis time by 80% | 💡 Unlock insights faster</span>
+          </p>
         </div>
       </header>
       <div className="tools-grid">
