@@ -59,7 +59,8 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
   return (
     <div className="tools-container">
       <header className="tools-header">
-        <h1>Available AI Tools</h1>
+        <h1>Hey Data Monrach</h1>
+        <h2>Available AI Tools</h2>
       </header>
       <div className="tools-grid">
         {tools.map((tool, index) => (
