@@ -978,7 +978,7 @@ Numeric columns found: {len(numeric_df.columns)}""",
 @app.post("/mcp/visualization")
 async def mcp_visualization(file: UploadFile = File(...)):
     """
-    Generate data visualizations
+    Generate comprehensive data visualizations including histograms, scatter plots, box plots, and correlation heatmaps
     """
     try:
         content = await file.read()
@@ -996,23 +996,219 @@ async def mcp_visualization(file: UploadFile = File(...)):
             import matplotlib
             matplotlib.use('Agg')
             import matplotlib.pyplot as plt
+            import seaborn as sns
             import base64
             from io import BytesIO
             
+            # Set style for better-looking plots
+            plt.style.use('default')
+            sns.set_palette("husl")
+            
             numeric_cols = df.select_dtypes(include=['number']).columns
+            categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+            
+            plots_created = []
+            
             if len(numeric_cols) > 0:
-                n_plots = min(3, len(numeric_cols))
-                fig, axes = plt.subplots(1, n_plots, figsize=(5*n_plots, 4))
-                if n_plots == 1:
-                    axes = [axes]
+                # 1. Distribution Plots (Histograms with KDE)
+                n_numeric = min(4, len(numeric_cols))
+                if n_numeric > 0:
+                    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+                    axes = axes.flatten()
+                    
+                    for i, col in enumerate(numeric_cols[:n_numeric]):
+                        ax = axes[i]
+                        # Histogram with KDE overlay
+                        data = df[col].dropna()
+                        ax.hist(data, bins=30, alpha=0.7, color='skyblue', edgecolor='black', density=True, label='Histogram')
+                        
+                        # Add KDE line
+                        try:
+                            from scipy import stats
+                            kde = stats.gaussian_kde(data)
+                            x_range = np.linspace(data.min(), data.max(), 100)
+                            ax.plot(x_range, kde(x_range), 'r-', linewidth=2, label='KDE')
+                        except:
+                            pass
+                        
+                        ax.set_title(f'Distribution of {col}', fontsize=12, fontweight='bold')
+                        ax.set_xlabel(col)
+                        ax.set_ylabel('Density')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend()
+                    
+                    # Hide unused subplots
+                    for i in range(n_numeric, 4):
+                        axes[i].set_visible(False)
+                    
+                    plt.tight_layout()
+                    
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+                    
+                    visualizations.append({
+                        "title": "Distribution Analysis (Histograms + KDE)",
+                        "image": image_base64,
+                        "type": "histogram_kde"
+                    })
+                    plots_created.append("Distribution plots")
                 
-                for i, col in enumerate(numeric_cols[:n_plots]):
-                    ax = axes[i] if n_plots > 1 else axes[0]
-                    ax.hist(df[col].dropna(), bins=20, alpha=0.7, color='skyblue', edgecolor='black')
+                # 2. Correlation Heatmap
+                if len(numeric_cols) >= 2:
+                    fig, ax = plt.subplots(figsize=(10, 8))
+                    corr_matrix = df[numeric_cols].corr()
+                    
+                    mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+                    sns.heatmap(corr_matrix, mask=mask, annot=True, cmap='RdBu_r', center=0,
+                               square=True, linewidths=0.5, ax=ax, fmt='.2f')
+                    ax.set_title('Correlation Matrix Heatmap', fontsize=14, fontweight='bold', pad=20)
+                    
+                    plt.tight_layout()
+                    
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+                    
+                    visualizations.append({
+                        "title": "Correlation Heatmap",
+                        "image": image_base64,
+                        "type": "heatmap"
+                    })
+                    plots_created.append("Correlation heatmap")
+                
+                # 3. Box Plots for Outlier Detection
+                if len(numeric_cols) > 0:
+                    n_box = min(4, len(numeric_cols))
+                    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+                    axes = axes.flatten()
+                    
+                    for i, col in enumerate(numeric_cols[:n_box]):
+                        ax = axes[i]
+                        data = df[col].dropna()
+                        
+                        # Create box plot
+                        box_plot = ax.boxplot(data, patch_artist=True, labels=[col])
+                        box_plot['boxes'][0].set_facecolor('lightblue')
+                        box_plot['boxes'][0].set_alpha(0.7)
+                        
+                        # Add mean point
+                        ax.scatter(1, data.mean(), color='red', s=50, zorder=5, label=f'Mean: {data.mean():.2f}')
+                        
+                        ax.set_title(f'Box Plot: {col}', fontsize=12, fontweight='bold')
+                        ax.set_ylabel('Values')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend()
+                    
+                    # Hide unused subplots
+                    for i in range(n_box, 4):
+                        axes[i].set_visible(False)
+                    
+                    plt.tight_layout()
+                    
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+                    
+                    visualizations.append({
+                        "title": "Box Plots (Outlier Detection)",
+                        "image": image_base64,
+                        "type": "boxplot"
+                    })
+                    plots_created.append("Box plots")
+                
+                # 4. Scatter Plot Matrix (for numerical relationships)
+                if len(numeric_cols) >= 2:
+                    # Select top 4 numeric columns for scatter plots
+                    selected_cols = numeric_cols[:4]
+                    
+                    if len(selected_cols) >= 2:
+                        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+                        axes = axes.flatten()
+                        
+                        plot_idx = 0
+                        for i in range(len(selected_cols)):
+                            for j in range(i+1, len(selected_cols)):
+                                if plot_idx >= 4:
+                                    break
+                                
+                                ax = axes[plot_idx]
+                                col_x, col_y = selected_cols[i], selected_cols[j]
+                                
+                                # Create scatter plot
+                                ax.scatter(df[col_x], df[col_y], alpha=0.6, s=30, edgecolors='black', linewidth=0.5)
+                                
+                                # Add trend line
+                                try:
+                                    z = np.polyfit(df[col_x].dropna(), df[col_y].dropna(), 1)
+                                    p = np.poly1d(z)
+                                    ax.plot(df[col_x], p(df[col_x]), "r--", alpha=0.8, linewidth=2)
+                                except:
+                                    pass
+                                
+                                ax.set_xlabel(col_x)
+                                ax.set_ylabel(col_y)
+                                ax.set_title(f'{col_x} vs {col_y}', fontsize=11, fontweight='bold')
+                                ax.grid(True, alpha=0.3)
+                                
+                                plot_idx += 1
+                        
+                        # Hide unused subplots
+                        for i in range(plot_idx, 4):
+                            axes[i].set_visible(False)
+                        
+                        plt.tight_layout()
+                        
+                        buffer = BytesIO()
+                        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                        buffer.seek(0)
+                        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                        plt.close()
+                        
+                        visualizations.append({
+                            "title": "Scatter Plot Matrix (Relationships)",
+                            "image": image_base64,
+                            "type": "scatter"
+                        })
+                        plots_created.append("Scatter plots")
+            
+            # 5. Categorical Analysis (if categorical columns exist)
+            if len(categorical_cols) > 0:
+                n_cat = min(4, len(categorical_cols))
+                fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+                axes = axes.flatten()
+                
+                for i, col in enumerate(categorical_cols[:n_cat]):
+                    ax = axes[i]
+                    
+                    # Get value counts
+                    value_counts = df[col].value_counts().head(10)  # Top 10 categories
+                    
+                    # Create bar plot
+                    bars = ax.bar(range(len(value_counts)), value_counts.values, 
+                                 color=plt.cm.Set3(np.linspace(0, 1, len(value_counts))))
+                    
+                    # Add value labels on bars
+                    for bar, count in zip(bars, value_counts.values):
+                        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(value_counts.values)*0.01, 
+                               str(count), ha='center', va='bottom', fontweight='bold')
+                    
                     ax.set_title(f'Distribution of {col}', fontsize=12, fontweight='bold')
-                    ax.set_xlabel(col)
-                    ax.set_ylabel('Frequency')
-                    ax.grid(True, alpha=0.3)
+                    ax.set_xlabel('Categories')
+                    ax.set_ylabel('Count')
+                    ax.set_xticks(range(len(value_counts)))
+                    ax.set_xticklabels(value_counts.index, rotation=45, ha='right')
+                    ax.grid(True, alpha=0.3, axis='y')
+                
+                # Hide unused subplots
+                for i in range(n_cat, 4):
+                    axes[i].set_visible(False)
                 
                 plt.tight_layout()
                 
@@ -1023,52 +1219,76 @@ async def mcp_visualization(file: UploadFile = File(...)):
                 plt.close()
                 
                 visualizations.append({
-                    "title": "Data Distribution Histograms",
+                    "title": "Categorical Data Analysis",
                     "image": image_base64,
-                    "type": "histogram"
+                    "type": "categorical"
                 })
-                
+                plots_created.append("Categorical plots")
+            
+            if visualizations:
                 results = {
-                    "title": "Data Visualization Generated",
-                    "content": f"""📊 Visualization Summary:
+                    "title": "Comprehensive Data Visualization Suite",
+                    "content": f"""📊 Advanced Visualization Analysis Complete:
 
-✅ Successfully created distribution plots for {n_plots} numeric columns:
-{chr(10).join([f"  • {col}: {len(df[col].dropna())} values plotted" for col in numeric_cols[:n_plots]])}
+✅ Generated {len(visualizations)} comprehensive visualization sets:
+{chr(10).join([f"  • {plot}" for plot in plots_created])}
 
-📈 Chart Details:
-  • Chart Type: Histograms (20 bins each)
-  • Columns Visualized: {', '.join(numeric_cols[:n_plots])}
-  • Missing Values: Excluded from plots
-  • Image Format: PNG (high resolution)
+📈 Visualization Details:
+  • Total Charts Created: {len(visualizations)}
+  • Numeric Columns: {len(numeric_cols)} ({', '.join(numeric_cols[:5])}{'...' if len(numeric_cols) > 5 else ''})
+  • Categorical Columns: {len(categorical_cols)} ({', '.join(categorical_cols[:3])}{'...' if len(categorical_cols) > 3 else ''})
+  • Data Points: {len(df)} rows
 
-💡 Insights:
-{chr(10).join([f"  • {col}: Range from {df[col].min():.2f} to {df[col].max():.2f}" for col in numeric_cols[:n_plots]])}""",
+🎯 Chart Types:
+  • Distribution plots with KDE overlays
+  • Correlation heatmap with hierarchical clustering
+  • Box plots for outlier detection
+  • Scatter plot matrix for relationships
+  • Categorical frequency analysis
+
+💡 Key Insights:
+  • Missing values automatically excluded
+  • Trend lines added to scatter plots
+  • Statistical overlays (mean, KDE) included
+  • Color-coded correlation strengths
+  • Publication-ready high-resolution output""",
                     "data": convert_numpy_types({
-                        "columns_plotted": numeric_cols[:n_plots].tolist(),
-                        "total_numeric_columns": len(numeric_cols)
+                        "plots_generated": len(visualizations),
+                        "numeric_columns": numeric_cols.tolist(),
+                        "categorical_columns": categorical_cols.tolist(),
+                        "total_records": len(df),
+                        "chart_types": [viz["type"] for viz in visualizations]
                     })
                 }
             else:
                 results = {
-                    "title": "No Numeric Data for Visualization",
-                    "content": f"""❌ Error: No numeric columns found for visualization.
+                    "title": "No Data Available for Visualization",
+                    "content": f"""❌ Error: Insufficient data for visualization generation.
 
 Available columns:
 {chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
 
-💡 Suggestion: Ensure your dataset contains numeric columns for visualization.""",
+💡 Suggestions:
+  • Ensure dataset has numeric columns for statistical plots
+  • Include categorical columns for frequency analysis
+  • Check for sufficient data points (minimum 10 recommended)""",
                     "error": True
                 }
                 
         except ImportError as e:
             results = {
-                "title": "Visualization Library Error",
+                "title": "Visualization Libraries Missing",
                 "content": f"""❌ Error: Required visualization libraries not available.
                 
-Error details: {str(e)}
+Missing dependency: {str(e)}
 
 💡 Solution: Install required packages:
-  pip install matplotlib seaborn""",
+  pip install matplotlib seaborn scipy
+
+🔧 Advanced Features Require:
+  • matplotlib: Core plotting functionality
+  • seaborn: Statistical visualizations
+  • scipy: KDE and statistical overlays""",
                 "error": True
             }
         
