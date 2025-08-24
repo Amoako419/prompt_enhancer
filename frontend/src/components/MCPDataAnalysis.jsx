@@ -52,6 +52,12 @@ export default function MCPDataAnalysis({ onBackToTools }) {
       description: "Analyze relationships between variables in your dataset"
     },
     {
+      id: "chart_recommendations",
+      label: "Smart Chart Suggestions",
+      icon: <Settings size={16} />,
+      description: "Get intelligent chart recommendations based on your data characteristics"
+    },
+    {
       id: "visualization",
       label: "Data Visualization",
       icon: <PieChart size={16} />,
@@ -127,6 +133,7 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         'load_data': '/mcp/load-data',
         'descriptive_stats': '/mcp/descriptive-stats',
         'correlation_analysis': '/mcp/correlation-analysis',
+        'chart_recommendations': '/mcp/chart-recommendations',
         'visualization': '/mcp/visualization',
         'hypothesis_testing': '/mcp/hypothesis-testing',
         'machine_learning': '/mcp/machine-learning'
@@ -158,6 +165,213 @@ export default function MCPDataAnalysis({ onBackToTools }) {
     }
   };
 
+  // Helper function to render data as tables
+  const renderDataTable = (data, title = "Data") => {
+    if (!data) return null;
+
+    // Handle different data structures
+    if (Array.isArray(data)) {
+      // Array of objects (like CSV data rows)
+      if (data.length > 0 && typeof data[0] === 'object') {
+        const columns = Object.keys(data[0]);
+        return (
+          <div className="data-table-container">
+            <h5>{title}</h5>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {columns.map((col, index) => (
+                      <th key={index}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.slice(0, 100).map((row, rowIndex) => ( // Limit to 100 rows for performance
+                    <tr key={rowIndex}>
+                      {columns.map((col, colIndex) => (
+                        <td key={colIndex}>{
+                          typeof row[col] === 'object' ? 
+                            JSON.stringify(row[col]) : 
+                            String(row[col] ?? '')
+                        }</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {data.length > 100 && (
+                <p className="table-note">Showing first 100 rows of {data.length} total rows</p>
+              )}
+            </div>
+          </div>
+        );
+      }
+      // Array of primitives
+      return (
+        <div className="data-table-container">
+          <h5>{title}</h5>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr><th>Value</th></tr>
+              </thead>
+              <tbody>
+                {data.slice(0, 50).map((item, index) => (
+                  <tr key={index}>
+                    <td>{String(item)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {data.length > 50 && (
+              <p className="table-note">Showing first 50 items of {data.length} total items</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Handle object data (like dataset info, statistics)
+    if (typeof data === 'object' && data !== null) {
+      // Check if it's a preview object with rows
+      if (data.preview && Array.isArray(data.preview)) {
+        return renderDataTable(data.preview, `${title} (Preview)`);
+      }
+      
+      // Check if it has a columns property (dataset info)
+      if (data.columns && typeof data.columns === 'object') {
+        const columns = Object.keys(data.columns);
+        return (
+          <div className="data-table-container">
+            <h5>{title} - Column Information</h5>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Non-Null Count</th>
+                    <th>Sample Values</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {columns.map((colName, index) => {
+                    const colInfo = data.columns[colName];
+                    return (
+                      <tr key={index}>
+                        <td><strong>{colName}</strong></td>
+                        <td>{colInfo.dtype || 'Unknown'}</td>
+                        <td>{colInfo.non_null_count || 'N/A'}</td>
+                        <td>{
+                          colInfo.sample_values ? 
+                            colInfo.sample_values.slice(0, 3).join(', ') + 
+                            (colInfo.sample_values.length > 3 ? '...' : '') : 
+                            'N/A'
+                        }</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            
+            {data.shape && (
+              <div className="dataset-summary">
+                <p><strong>Dataset Shape:</strong> {data.shape[0]} rows × {data.shape[1]} columns</p>
+                {data.missing_values && (
+                  <p><strong>Missing Values:</strong> {JSON.stringify(data.missing_values)}</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Check if it's statistics data
+      if (data.describe || data.summary || data.statistics) {
+        const statsData = data.describe || data.summary || data.statistics;
+        if (typeof statsData === 'object') {
+          const statKeys = Object.keys(statsData);
+          const metrics = statKeys.length > 0 ? Object.keys(statsData[statKeys[0]] || {}) : [];
+          
+          return (
+            <div className="data-table-container">
+              <h5>{title} - Statistical Summary</h5>
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Metric</th>
+                      {statKeys.map((col, index) => (
+                        <th key={index}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.map((metric, index) => (
+                      <tr key={index}>
+                        <td><strong>{metric}</strong></td>
+                        {statKeys.map((col, colIndex) => (
+                          <td key={colIndex}>
+                            {typeof statsData[col][metric] === 'number' ? 
+                              Number(statsData[col][metric]).toFixed(3) : 
+                              String(statsData[col][metric] || 'N/A')
+                            }
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        }
+      }
+
+      // Generic object renderer as key-value table
+      const entries = Object.entries(data);
+      if (entries.length > 0) {
+        return (
+          <div className="data-table-container">
+            <h5>{title}</h5>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Property</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map(([key, value], index) => (
+                    <tr key={index}>
+                      <td><strong>{key}</strong></td>
+                      <td>{
+                        typeof value === 'object' ? 
+                          JSON.stringify(value, null, 2) : 
+                          String(value)
+                      }</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // Fallback to JSON display
+    return (
+      <div className="data-table-container">
+        <h5>{title}</h5>
+        <pre className="result-text">{JSON.stringify(data, null, 2)}</pre>
+      </div>
+    );
+  };
+
   // Render analysis results
   const renderResults = () => {
     if (!results) return null;
@@ -180,41 +394,28 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         {results.results && results.results.title && (
           <div className="result-card">
             <h4>{results.results.title}</h4>
-            <pre className="result-text readable">{results.results.content}</pre>
+            <div className="result-content readable">{results.results.content}</div>
           </div>
         )}
 
-        {/* Raw data display for debugging */}
+        {/* Enhanced data display with tables */}
         {results.results && results.results.data && (
           <div className="result-card">
-            <h4>Technical Data</h4>
-            <details>
-              <summary>Click to view raw data</summary>
-              <pre className="result-text">{JSON.stringify(results.results.data, null, 2)}</pre>
-            </details>
+            {renderDataTable(results.results.data, "Dataset Information")}
           </div>
         )}
 
-        {/* Legacy support for old format */}
+        {/* Legacy support for old format - now with table rendering */}
         {results.results && !results.results.title && (
           <div className="result-card">
-            <h4>Analysis Data</h4>
-            <pre className="result-text">{JSON.stringify(results.results, null, 2)}</pre>
+            {renderDataTable(results.results, "Analysis Data")}
           </div>
         )}
 
-        {/* Legacy support for old format */}
-        {results.summary && (
-          <div className="result-card">
-            <h4>Summary</h4>
-            <pre className="result-text">{results.summary}</pre>
-          </div>
-        )}
-
+        {/* Statistics with table formatting */}
         {results.statistics && (
           <div className="result-card">
-            <h4>Statistics</h4>
-            <pre className="result-text">{JSON.stringify(results.statistics, null, 2)}</pre>
+            {renderDataTable(results.statistics, "Statistical Analysis")}
           </div>
         )}
 
@@ -231,6 +432,62 @@ export default function MCPDataAnalysis({ onBackToTools }) {
                     className="visualization-image"
                   />
                   {viz.title && <p className="viz-title">{viz.title}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chart Recommendations Display */}
+        {results.recommendations && (
+          <div className="result-card">
+            <h4>📊 Smart Chart Recommendations</h4>
+            {results.analysis_summary && (
+              <p className="recommendation-summary">{results.analysis_summary}</p>
+            )}
+            
+            {results.dataset_info && (
+              <div className="dataset-insights">
+                <h5>Dataset Insights</h5>
+                <div className="insights-grid">
+                  <div className="insight-item">
+                    <span className="insight-label">Total Rows:</span>
+                    <span className="insight-value">{results.dataset_info.total_rows}</span>
+                  </div>
+                  <div className="insight-item">
+                    <span className="insight-label">Total Columns:</span>
+                    <span className="insight-value">{results.dataset_info.total_columns}</span>
+                  </div>
+                  <div className="insight-item">
+                    <span className="insight-label">Numeric Columns:</span>
+                    <span className="insight-value">{results.dataset_info.numeric_columns}</span>
+                  </div>
+                  <div className="insight-item">
+                    <span className="insight-label">Categorical Columns:</span>
+                    <span className="insight-value">{results.dataset_info.categorical_columns}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="recommendations-list">
+              {results.recommendations.map((rec, index) => (
+                <div key={index} className={`recommendation-card priority-${rec.priority}`}>
+                  <div className="recommendation-header">
+                    <h6>{rec.chart_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</h6>
+                    <span className={`priority-badge ${rec.priority}`}>
+                      {rec.priority.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="recommendation-reason">{rec.reason}</p>
+                  <p className="recommendation-best-for">
+                    <strong>Best for:</strong> {rec.best_for}
+                  </p>
+                  {rec.suitable_columns && rec.suitable_columns.length > 0 && (
+                    <div className="suitable-columns">
+                      <strong>Suggested columns:</strong> {rec.suitable_columns.join(', ')}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

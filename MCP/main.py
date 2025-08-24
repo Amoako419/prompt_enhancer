@@ -133,6 +133,65 @@ def load_csv_data(file_path: str, dataset_name: str = "main", **kwargs) -> Dict[
         return {"error": f"Failed to load CSV: {str(e)}"}
 
 @mcp.tool()
+def load_csv_from_content(content: str, filename: str, dataset_name: str = "main", **kwargs) -> Dict[str, Any]:
+    """
+    Load CSV data from string content into memory for analysis.
+    
+    Args:
+        content: CSV content as string
+        filename: Original filename for reference
+        dataset_name: Name to store the dataset under (default: "main")
+        **kwargs: Additional pandas read_csv parameters
+        
+    Returns:
+        Dictionary with dataset info and preview
+    """
+    try:
+        # Create a StringIO object from the content
+        from io import StringIO
+        csv_io = StringIO(content)
+        
+        # Try to detect if the first row contains headers
+        # Read first few lines to analyze
+        lines = content.strip().split('\n')
+        if len(lines) < 2:
+            return {"error": "CSV file must contain at least 2 rows"}
+        
+        # Try to auto-detect headers
+        first_row = lines[0].split(',')
+        second_row = lines[1].split(',') if len(lines) > 1 else []
+        
+        # Check if first row looks like headers (contains non-numeric strings)
+        has_headers = any(not cell.strip().replace('.', '').replace('-', '').isdigit() 
+                         for cell in first_row if cell.strip())
+        
+        # Load the CSV file with appropriate header setting
+        if has_headers:
+            df = pd.read_csv(csv_io, **kwargs)
+        else:
+            df = pd.read_csv(csv_io, header=None, **kwargs)
+        
+        # Store the dataset
+        datasets[dataset_name] = df
+        
+        # Get comprehensive dataset info
+        dataset_info = get_dataset_info(dataset_name)
+        
+        return {
+            "message": f"Successfully loaded CSV data from '{filename}' as '{dataset_name}'",
+            "filename": filename,
+            "has_headers": has_headers,
+            "shape": list(df.shape),
+            "columns": [str(col) for col in df.columns],
+            "data": dataset_info.get("data", {}),
+            "columns_info": dataset_info.get("columns", {}),
+            "preview": dataset_info.get("preview", []),
+            "memory_usage": dataset_info.get("memory_usage", 0)
+        }
+    except Exception as e:
+        return {"error": f"Failed to load CSV from content: {str(e)}"}
+
+@mcp.tool()
 def load_excel_data(file_path: str, sheet_name: Optional[str] = None, dataset_name: str = "main", **kwargs) -> Dict[str, Any]:
     """
     Load Excel data into memory for analysis.
@@ -178,21 +237,64 @@ def get_dataset_info(dataset_name: str = "main") -> Dict[str, Any]:
     df = datasets[dataset_name]
     
     try:
+        # Build comprehensive column information
+        columns_info = {}
+        for col in df.columns:
+            col_data = df[col]
+            
+            # Get basic type information
+            dtype_str = str(col_data.dtype)
+            
+            # Get non-null count
+            non_null_count = col_data.notna().sum()
+            
+            # Get sample values (first few non-null unique values)
+            sample_values = col_data.dropna().unique()[:5].tolist()
+            
+            # Convert numpy types to native Python types for JSON serialization
+            sample_values = [
+                int(x) if isinstance(x, (np.integer, np.int64)) else
+                float(x) if isinstance(x, (np.floating, np.float64)) else
+                str(x) for x in sample_values
+            ]
+            
+            columns_info[str(col)] = {
+                "dtype": dtype_str,
+                "non_null_count": int(non_null_count),
+                "sample_values": sample_values,
+                "total_count": len(col_data),
+                "null_count": int(col_data.isna().sum()),
+                "unique_count": int(col_data.nunique())
+            }
+        
+        # Get preview data with proper column names
+        preview_data = []
+        for _, row in df.head().iterrows():
+            row_dict = {}
+            for col in df.columns:
+                value = row[col]
+                # Convert numpy types to native Python types
+                if pd.isna(value):
+                    row_dict[str(col)] = None
+                elif isinstance(value, (np.integer, np.int64)):
+                    row_dict[str(col)] = int(value)
+                elif isinstance(value, (np.floating, np.float64)):
+                    row_dict[str(col)] = float(value)
+                else:
+                    row_dict[str(col)] = str(value)
+            preview_data.append(row_dict)
+        
         info = {
             "name": dataset_name,
-            "shape": df.shape,
-            "columns": df.columns.tolist(),
-            "dtypes": df.dtypes.to_dict(),
-            "null_counts": df.isnull().sum().to_dict(),
-            "memory_usage": df.memory_usage(deep=True).sum(),
-            "numeric_columns": df.select_dtypes(include=[np.number]).columns.tolist(),
-            "categorical_columns": df.select_dtypes(include=['object', 'category']).columns.tolist(),
-            "datetime_columns": df.select_dtypes(include=['datetime']).columns.tolist()
+            "shape": list(df.shape),  # Convert to list for JSON serialization
+            "columns": columns_info,
+            "preview": preview_data,
+            "memory_usage": int(df.memory_usage(deep=True).sum()),
+            "missing_values": {str(col): int(count) for col, count in df.isnull().sum().items() if count > 0},
+            "numeric_columns": [str(col) for col in df.select_dtypes(include=[np.number]).columns],
+            "categorical_columns": [str(col) for col in df.select_dtypes(include=['object', 'category']).columns],
+            "datetime_columns": [str(col) for col in df.select_dtypes(include=['datetime']).columns]
         }
-        
-        # Add basic statistics for numeric columns
-        if len(info["numeric_columns"]) > 0:
-            info["numeric_summary"] = df[info["numeric_columns"]].describe().to_dict()
             
         return info
     except Exception as e:
@@ -726,6 +828,156 @@ def query_data(dataset_name: str = "main",
         }
     except Exception as e:
         return {"error": f"Failed to execute query: {str(e)}"}
+
+def suggest_chart_types(dataset_name: str = "main") -> Dict[str, Any]:
+    """
+    Analyze dataset characteristics and suggest appropriate chart types.
+    
+    Args:
+        dataset_name: Name of the dataset to analyze
+        
+    Returns:
+        Dictionary with chart recommendations and explanations
+    """
+    if dataset_name not in datasets:
+        return {"error": f"Dataset '{dataset_name}' not found"}
+    
+    df = datasets[dataset_name]
+    
+    try:
+        # Analyze data characteristics
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+        
+        num_rows, num_cols = df.shape
+        num_numeric = len(numeric_cols)
+        num_categorical = len(categorical_cols)
+        num_datetime = len(datetime_cols)
+        
+        recommendations = []
+        
+        # Basic data insights
+        insights = {
+            "total_columns": num_cols,
+            "total_rows": num_rows,
+            "numeric_columns": num_numeric,
+            "categorical_columns": num_categorical,
+            "datetime_columns": num_datetime,
+            "numeric_column_names": numeric_cols,
+            "categorical_column_names": categorical_cols,
+            "datetime_column_names": datetime_cols
+        }
+        
+        # Chart recommendations based on data characteristics
+        
+        # 1. Histograms for numeric distributions
+        if num_numeric > 0:
+            recommendations.append({
+                "chart_type": "histogram",
+                "priority": "high",
+                "reason": f"Great for exploring the distribution of numeric variables ({num_numeric} numeric columns available)",
+                "best_for": "Understanding data distribution, identifying outliers, checking normality",
+                "suitable_columns": numeric_cols[:3]  # Limit to first 3 for display
+            })
+        
+        # 2. Correlation heatmap for multiple numeric variables
+        if num_numeric >= 2:
+            recommendations.append({
+                "chart_type": "correlation_heatmap",
+                "priority": "high",
+                "reason": f"Excellent for identifying relationships between {num_numeric} numeric variables",
+                "best_for": "Finding correlations, feature selection, understanding variable relationships",
+                "suitable_columns": numeric_cols
+            })
+        
+        # 3. Bar charts for categorical data
+        if num_categorical > 0:
+            recommendations.append({
+                "chart_type": "bar",
+                "priority": "high",
+                "reason": f"Perfect for comparing categories in {num_categorical} categorical column(s)",
+                "best_for": "Comparing category frequencies, identifying dominant categories",
+                "suitable_columns": categorical_cols[:2]  # Limit for display
+            })
+        
+        # 4. Scatter plots for numeric relationships
+        if num_numeric >= 2:
+            recommendations.append({
+                "chart_type": "scatter",
+                "priority": "medium",
+                "reason": f"Useful for exploring relationships between pairs of numeric variables",
+                "best_for": "Identifying patterns, trends, and outliers in relationships",
+                "suitable_columns": numeric_cols[:2]
+            })
+        
+        # 5. Box plots for distribution and outliers
+        if num_numeric > 0:
+            recommendations.append({
+                "chart_type": "box",
+                "priority": "medium",
+                "reason": f"Excellent for identifying outliers and distribution characteristics",
+                "best_for": "Outlier detection, comparing distributions across groups",
+                "suitable_columns": numeric_cols[:3]
+            })
+        
+        # 6. Time series plots for datetime data
+        if num_datetime > 0 and num_numeric > 0:
+            recommendations.append({
+                "chart_type": "line",
+                "priority": "high",
+                "reason": f"Essential for time-based data analysis with {num_datetime} datetime column(s)",
+                "best_for": "Trend analysis, seasonal patterns, time-based insights",
+                "suitable_columns": datetime_cols + numeric_cols[:2]
+            })
+        
+        # 7. Pie charts (only recommend for small categorical sets)
+        for col in categorical_cols:
+            unique_count = df[col].nunique()
+            if unique_count <= 6:  # Only recommend for small category sets
+                recommendations.append({
+                    "chart_type": "pie",
+                    "priority": "low",
+                    "reason": f"Suitable for '{col}' with {unique_count} categories (small categorical set)",
+                    "best_for": "Showing proportions of a whole, part-to-whole relationships",
+                    "suitable_columns": [col]
+                })
+        
+        # Sort recommendations by priority
+        priority_order = {"high": 3, "medium": 2, "low": 1}
+        recommendations.sort(key=lambda x: priority_order.get(x["priority"], 0), reverse=True)
+        
+        # Limit to top 6 recommendations to avoid overwhelming the user
+        recommendations = recommendations[:6]
+        
+        return {
+            "dataset_info": insights,
+            "recommendations": recommendations,
+            "total_recommendations": len(recommendations),
+            "analysis_summary": f"Based on your dataset with {num_rows} rows and {num_cols} columns ({num_numeric} numeric, {num_categorical} categorical, {num_datetime} datetime), we recommend starting with the high-priority charts."
+        }
+        
+    except Exception as e:
+        return {"error": f"Failed to analyze dataset for chart recommendations: {str(e)}"}
+
+@mcp.tool()
+async def get_chart_recommendations(dataset_name: str = "main") -> Dict[str, Any]:
+    """
+    Get intelligent chart recommendations based on dataset characteristics.
+    
+    This tool analyzes your dataset and suggests the most appropriate chart types
+    based on the data types, number of variables, and data characteristics.
+    
+    Args:
+        dataset_name: Name of the dataset to analyze (default: "main")
+        
+    Returns:
+        Dictionary containing:
+        - dataset_info: Basic information about the dataset
+        - recommendations: List of recommended charts with explanations
+        - analysis_summary: Overall recommendation summary
+    """
+    return suggest_chart_types(dataset_name)
 
 # Run the server
 if __name__ == "__main__":
