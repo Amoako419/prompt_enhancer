@@ -1543,3 +1543,111 @@
     padding-bottom: 1rem;
   }
 }
+
+/* Collapsible Viz Summary Styles */
+.viz-summary {
+  background: #1a1f2e;
+  border: 1px solid #2d3748;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.viz-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #2d3748;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.viz-summary-header:hover {
+  background: #374151;
+}
+
+.viz-summary-header h4 {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.viz-summary-content {
+  padding: 1rem;
+  animation: expandIn 0.3s ease;
+}
+
+/* Collapsible Stats Summary Styles */
+.stats-summary {
+  background: #1a1f2e;
+  border: 1px solid #2d3748;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.stats-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #2d3748;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.stats-summary-header:hover {
+  background: #374151;
+}
+
+.stats-summary-header h4 {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.stats-summary-content {
+  padding: 1rem;
+  animation: expandIn 0.3s ease;
+}
+
+/* Collapsible Tests Summary Styles */
+.tests-summary {
+  background: #1a1f2e;
+  border: 1px solid #2d3748;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.tests-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #2d3748;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.tests-summary-header:hover {
+  background: #374151;
+}
+
+.tests-summary-header h4 {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tests-summary-content {
+  padding: 1rem;
+  animation: expandIn 0.3s ease;
+}
