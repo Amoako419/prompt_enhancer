@@ -127,6 +127,12 @@ export const DataPreview = ({ data }) => {
 export const StatisticalAnalysis = ({ data }) => {
   console.log("StatisticalAnalysis received data:", data);
   
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
+
+  const toggleSummary = () => {
+    setIsSummaryCollapsed(!isSummaryCollapsed);
+  };
+  
   // Handle new API format
   if (data && data.statistics && data.numeric_columns) {
     return (
@@ -139,7 +145,17 @@ export const StatisticalAnalysis = ({ data }) => {
         
         {data.content && (
           <div className="stats-summary">
-            <pre className="formatted-content">{data.content}</pre>
+            <div className="stats-summary-header" onClick={toggleSummary}>
+              <h4>Summary</h4>
+              <button className="collapse-btn" type="button">
+                {isSummaryCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
+            </div>
+            {!isSummaryCollapsed && (
+              <div className="stats-summary-content">
+                <pre className="formatted-content">{data.content}</pre>
+              </div>
+            )}
           </div>
         )}
         
@@ -449,6 +465,12 @@ export const CorrelationAnalysis = ({ data }) => {
 export const StatisticalTests = ({ title, content, test_results, tests, rawData }) => {
   console.log("StatisticalTests received data:", { title, content, test_results, tests, rawData });
   
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
+
+  const toggleSummary = () => {
+    setIsSummaryCollapsed(!isSummaryCollapsed);
+  };
+  
   // Handle new API format with title, content, and test_results
   if (title && content && test_results) {
     return (
@@ -458,7 +480,17 @@ export const StatisticalTests = ({ title, content, test_results, tests, rawData 
         </div>
         
         <div className="tests-summary">
-          <pre className="formatted-content">{content}</pre>
+          <div className="tests-summary-header" onClick={toggleSummary}>
+            <h4>Summary</h4>
+            <button className="collapse-btn" type="button">
+              {isSummaryCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+            </button>
+          </div>
+          {!isSummaryCollapsed && (
+            <div className="tests-summary-content">
+              <pre className="formatted-content">{content}</pre>
+            </div>
+          )}
         </div>
         
         {test_results && test_results.length > 0 && (
@@ -841,6 +873,8 @@ export const Visualizations = ({ title, content, visualizations }) => {
     type: ''
   });
 
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
+
   const openModal = (imageSrc, title, type) => {
     setModalState({
       isOpen: true,
@@ -857,6 +891,10 @@ export const Visualizations = ({ title, content, visualizations }) => {
       title: '',
       type: ''
     });
+  };
+
+  const toggleSummary = () => {
+    setIsSummaryCollapsed(!isSummaryCollapsed);
   };
   
   if (!visualizations || visualizations.length === 0) {
@@ -881,7 +919,17 @@ export const Visualizations = ({ title, content, visualizations }) => {
       
       {content && (
         <div className="viz-summary">
-          <pre className="formatted-content">{content}</pre>
+          <div className="viz-summary-header" onClick={toggleSummary}>
+            <h4>Summary</h4>
+            <button className="collapse-btn" type="button">
+              {isSummaryCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+            </button>
+          </div>
+          {!isSummaryCollapsed && (
+            <div className="viz-summary-content">
+              <pre className="formatted-content">{content}</pre>
+            </div>
+          )}
         </div>
       )}
       
