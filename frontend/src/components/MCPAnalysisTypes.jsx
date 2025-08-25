@@ -1,6 +1,59 @@
-import React from 'react';
-import { BarChart3, PieChart, TrendingUp, LineChart, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart3, PieChart, TrendingUp, LineChart, AlertCircle, X, ZoomIn, Download } from 'lucide-react';
 import '../styles/MCPAnalysisTypes.css';
+
+// Image Modal Component
+const ImageModal = ({ isOpen, onClose, imageSrc, title, type }) => {
+  if (!isOpen) return null;
+
+  const downloadImage = () => {
+    const link = document.createElement('a');
+    link.href = imageSrc;
+    link.download = `${title.replace(/\s+/g, '_').toLowerCase()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="image-modal-overlay" onClick={onClose}>
+      <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="image-modal-header">
+          <div className="image-modal-title">
+            <h3>{title}</h3>
+            <span className="image-modal-type">{type}</span>
+          </div>
+          <div className="image-modal-actions">
+            <button
+              className="modal-action-btn"
+              onClick={downloadImage}
+              title="Download Image"
+            >
+              <Download size={18} />
+            </button>
+            <button
+              className="modal-action-btn modal-close-btn"
+              onClick={onClose}
+              title="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+        <div className="image-modal-body">
+          <img
+            src={imageSrc}
+            alt={title}
+            className="modal-image"
+          />
+        </div>
+        <div className="image-modal-footer">
+          <p>Click outside the image or press the X button to close</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const DataPreview = ({ data }) => {
   console.log("DataPreview received data:", data);
@@ -527,6 +580,31 @@ export const StatisticalTests = ({ title, content, test_results, tests, rawData 
 export const MLModelResults = ({ title, content, model_data, models, visualizations, rawData }) => {
   console.log("MLModelResults received data:", { title, content, model_data, models, visualizations, rawData });
   
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    imageSrc: '',
+    title: '',
+    type: ''
+  });
+
+  const openModal = (imageSrc, title, type) => {
+    setModalState({
+      isOpen: true,
+      imageSrc,
+      title,
+      type
+    });
+  };
+
+  const closeModal = () => {
+    setModalState({
+      isOpen: false,
+      imageSrc: '',
+      title: '',
+      type: ''
+    });
+  };
+  
   // Handle new API format with title, content, and model_data
   if (title && content && model_data) {
     return (
@@ -618,16 +696,22 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
                   
                   {viz.image ? (
                     <div className="viz-image-container">
-                      <img 
-                        src={`data:image/png;base64,${viz.image}`}
-                        alt={viz.title}
-                        className="viz-image"
-                        onError={(e) => {
-                          console.error("Failed to load ML image for:", viz.title);
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
+                      <div className="viz-image-wrapper" onClick={() => openModal(`data:image/png;base64,${viz.image}`, viz.title, viz.type)}>
+                        <img 
+                          src={`data:image/png;base64,${viz.image}`}
+                          alt={viz.title}
+                          className="viz-image clickable-image"
+                          onError={(e) => {
+                            console.error("Failed to load ML image for:", viz.title);
+                            e.target.style.display = 'none';
+                            e.target.parentElement.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="image-overlay">
+                          <ZoomIn size={24} />
+                          <span>Click to expand</span>
+                        </div>
+                      </div>
                       <div className="viz-fallback" style={{ display: 'none' }}>
                         <div className="fallback-content">
                           <PieChart size={48} className="text-gray-400" />
@@ -659,6 +743,14 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
             </details>
           </div>
         )}
+
+        <ImageModal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          imageSrc={modalState.imageSrc}
+          title={modalState.title}
+          type={modalState.type}
+        />
       </div>
     );
   }
@@ -736,6 +828,31 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
 export const Visualizations = ({ title, content, visualizations }) => {
   console.log("Visualizations component received:", { title, content, visualizations });
   
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    imageSrc: '',
+    title: '',
+    type: ''
+  });
+
+  const openModal = (imageSrc, title, type) => {
+    setModalState({
+      isOpen: true,
+      imageSrc,
+      title,
+      type
+    });
+  };
+
+  const closeModal = () => {
+    setModalState({
+      isOpen: false,
+      imageSrc: '',
+      title: '',
+      type: ''
+    });
+  };
+  
   if (!visualizations || visualizations.length === 0) {
     return (
       <div className="visualizations-container">
@@ -779,16 +896,22 @@ export const Visualizations = ({ title, content, visualizations }) => {
             
             {viz.image ? (
               <div className="viz-image-container">
-                <img 
-                  src={`data:image/png;base64,${viz.image}`}
-                  alt={viz.title}
-                  className="viz-image"
-                  onError={(e) => {
-                    console.error("Failed to load image for:", viz.title);
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
+                <div className="viz-image-wrapper" onClick={() => openModal(`data:image/png;base64,${viz.image}`, viz.title, viz.type)}>
+                  <img 
+                    src={`data:image/png;base64,${viz.image}`}
+                    alt={viz.title}
+                    className="viz-image clickable-image"
+                    onError={(e) => {
+                      console.error("Failed to load image for:", viz.title);
+                      e.target.style.display = 'none';
+                      e.target.parentElement.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="image-overlay">
+                    <ZoomIn size={24} />
+                    <span>Click to expand</span>
+                  </div>
+                </div>
                 <div className="viz-fallback" style={{ display: 'none' }}>
                   <div className="fallback-content">
                     <PieChart size={48} className="text-gray-400" />
@@ -817,6 +940,14 @@ export const Visualizations = ({ title, content, visualizations }) => {
           </div>
         ))}
       </div>
+
+      <ImageModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        imageSrc={modalState.imageSrc}
+        title={modalState.title}
+        type={modalState.type}
+      />
     </div>
   );
 };
