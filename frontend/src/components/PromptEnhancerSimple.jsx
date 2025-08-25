@@ -203,7 +203,7 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
             )}
 
             {/* Input Section */}
-            <div className="input-section">
+            <div className="peinput-section">
               <div className="input-container">
                 <div className="input-header">
                   <Plus size={16} />

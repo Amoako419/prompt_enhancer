@@ -161,7 +161,7 @@ export default function DataExplorer({ onBackToTools }) {
           </div>
 
           {/* Input Section */}
-          <div className="input-section">
+          <div className="deinput-section">
             <div className="section-header">
               <FileText className="section-icon" size={20} />
               <h3>Describe Your Dataset and Analysis Goals</h3>
