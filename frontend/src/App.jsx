@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 import ThemeToggle from './components/ThemeToggle';
+import UserProfile from './components/UserProfile';
+import ProtectedRoute from './components/ProtectedRoute';
 import AITools from './components/AITools';
 import PromptEnhancerSimple from './components/PromptEnhancerSimple';
 import SqlConverter from './components/SqlConverter';
@@ -10,6 +13,7 @@ import DataPipelineGenerator from './components/DataPipelineGenerator';
 import MCPDataAnalysis from './components/MCPDataAnalysis';
 import "./styles/theme.css";
 import "./App.css";
+import "./styles/responsive.css";
 
 export default function App() {
   const [currentView, setCurrentView] = useState('tools'); // 'tools', 'enhancer', 'sqlConverter', 'dataExplorer', 'skillAssessment', 'pipelineGenerator', or 'mcpAnalysis'
@@ -57,10 +61,17 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <div className="app">
-        <ThemeToggle />
-        {renderCurrentView()}
-      </div>
+      <AuthProvider>
+        <div className="app">
+          <header className="app-header">
+            <ThemeToggle />
+            <UserProfile />
+          </header>
+          <ProtectedRoute>
+            {renderCurrentView()}
+          </ProtectedRoute>
+        </div>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

@@ -217,4 +217,4 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
->>>>>>> 39fc86253e936e2c051130cee148d37fce8c64a5
+*.db

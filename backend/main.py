@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 import os
+import asyncio
 from typing import List, Optional, Any, Dict
 from dotenv import load_dotenv
 import re
@@ -12,10 +13,23 @@ import numpy as np
 import io
 import subprocess
 import tempfile
+from sqlalchemy.ext.asyncio import AsyncSession
 
+# Import database and models
+from database import get_db, engine, Base
+from models.models import User, Session, Memory
+
+# Import routers
+from routers import auth, memory, ai_memory
+
+# Load environment variables
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    title="Prompt Enhancer API",
+    description="API for prompt enhancement with user memory and authentication",
+    version="2.0.0",
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -29,6 +43,19 @@ app.add_middleware(
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.0-flash")
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(memory.router)
+app.include_router(ai_memory.router)
+
+# Database initialization
+@app.on_event("startup")
+async def startup():
+    # Create tables if they don't exist
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print("Database initialized on startup")
 
 # Utility function to convert numpy types to native Python types
 def convert_numpy_types(obj: Any) -> Any:
