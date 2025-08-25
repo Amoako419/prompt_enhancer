@@ -414,6 +414,7 @@ export default function MCPDataAnalysis({ onBackToTools }) {
           title: resultsData.title,
           content: resultsData.content,
           model_data: resultsData.data,
+          visualizations: results.visualizations || [], // Include visualizations
           rawData: resultsData
         };
       }
@@ -567,6 +568,7 @@ export default function MCPDataAnalysis({ onBackToTools }) {
             content={mlProps.content}
             model_data={mlProps.model_data}
             models={mlProps.models}
+            visualizations={mlProps.visualizations}
             rawData={mlProps.rawData}
           /> : 
           <div className="mcp-no-results">

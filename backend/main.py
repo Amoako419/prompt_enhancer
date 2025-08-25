@@ -1458,6 +1458,12 @@ async def mcp_machine_learning(file: UploadFile = File(...)):
                 from sklearn.cluster import KMeans
                 from sklearn.preprocessing import StandardScaler
                 import numpy as np
+                import matplotlib
+                matplotlib.use('Agg')
+                import matplotlib.pyplot as plt
+                import seaborn as sns
+                import base64
+                from io import BytesIO
                 
                 features = df[numeric_cols].dropna()
                 if len(features) >= 3:
@@ -1468,6 +1474,185 @@ async def mcp_machine_learning(file: UploadFile = File(...)):
                     
                     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
                     clusters = kmeans.fit_predict(features_scaled)
+                    
+                    # Add cluster labels to the original data
+                    df_with_clusters = features.copy()
+                    df_with_clusters['Cluster'] = clusters
+                    
+                    # Generate visualizations
+                    visualizations = []
+                    
+                    # Set style for better-looking plots
+                    plt.style.use('default')
+                    sns.set_palette("husl")
+                    
+                    # 1. Cluster Scatter Plot (2D projection using first two features)
+                    fig, ax = plt.subplots(figsize=(10, 8))
+                    
+                    # Use first two numeric columns for visualization
+                    x_col, y_col = numeric_cols[0], numeric_cols[1]
+                    
+                    # Create scatter plot with different colors for each cluster
+                    colors = plt.cm.Set1(np.linspace(0, 1, n_clusters))
+                    for i in range(n_clusters):
+                        cluster_mask = clusters == i
+                        cluster_data = features[cluster_mask]
+                        ax.scatter(cluster_data[x_col], cluster_data[y_col], 
+                                 c=[colors[i]], alpha=0.7, s=50, 
+                                 label=f'Cluster {i+1} ({sum(cluster_mask)} points)', 
+                                 edgecolors='black', linewidth=0.5)
+                    
+                    # Plot centroids
+                    centroids = scaler.inverse_transform(kmeans.cluster_centers_)
+                    for i, centroid in enumerate(centroids):
+                        ax.scatter(centroid[0], centroid[1], c='red', s=200, alpha=0.8, 
+                                 marker='x', linewidths=3, label=f'Centroid {i+1}' if i == 0 else "")
+                    
+                    ax.set_xlabel(x_col, fontweight='bold')
+                    ax.set_ylabel(y_col, fontweight='bold')
+                    ax.set_title(f'K-Means Clustering Results\n{x_col} vs {y_col}', 
+                                fontsize=14, fontweight='bold', pad=20)
+                    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+                    ax.grid(True, alpha=0.3)
+                    
+                    plt.tight_layout()
+                    
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+                    
+                    visualizations.append({
+                        "title": "Cluster Scatter Plot",
+                        "image": image_base64,
+                        "type": "cluster_scatter"
+                    })
+                    
+                    # 2. Cluster Distribution Bar Chart
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    
+                    cluster_counts = [sum(clusters == i) for i in range(n_clusters)]
+                    cluster_labels = [f'Cluster {i+1}' for i in range(n_clusters)]
+                    
+                    bars = ax.bar(cluster_labels, cluster_counts, 
+                                 color=colors[:n_clusters], alpha=0.8, edgecolor='black', linewidth=1)
+                    
+                    # Add value labels on bars
+                    for bar, count in zip(bars, cluster_counts):
+                        percentage = (count / len(features)) * 100
+                        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(cluster_counts)*0.01,
+                               f'{count}\n({percentage:.1f}%)', ha='center', va='bottom', fontweight='bold')
+                    
+                    ax.set_title('Cluster Size Distribution', fontsize=14, fontweight='bold', pad=20)
+                    ax.set_xlabel('Clusters', fontweight='bold')
+                    ax.set_ylabel('Number of Data Points', fontweight='bold')
+                    ax.grid(True, alpha=0.3, axis='y')
+                    
+                    plt.tight_layout()
+                    
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+                    
+                    visualizations.append({
+                        "title": "Cluster Distribution",
+                        "image": image_base64,
+                        "type": "cluster_distribution"
+                    })
+                    
+                    # 3. Feature Comparison by Cluster (Box plots)
+                    n_features_to_plot = min(4, len(numeric_cols))
+                    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+                    axes = axes.flatten()
+                    
+                    for i, col in enumerate(numeric_cols[:n_features_to_plot]):
+                        ax = axes[i]
+                        
+                        # Prepare data for box plot
+                        cluster_data = []
+                        cluster_names = []
+                        for cluster_id in range(n_clusters):
+                            cluster_mask = clusters == cluster_id
+                            cluster_values = features[cluster_mask][col].values
+                            cluster_data.append(cluster_values)
+                            cluster_names.append(f'C{cluster_id+1}')
+                        
+                        # Create box plot
+                        bp = ax.boxplot(cluster_data, labels=cluster_names, patch_artist=True)
+                        
+                        # Color the boxes
+                        for patch, color in zip(bp['boxes'], colors[:n_clusters]):
+                            patch.set_facecolor(color)
+                            patch.set_alpha(0.7)
+                        
+                        ax.set_title(f'Distribution of {col}', fontweight='bold')
+                        ax.set_xlabel('Cluster')
+                        ax.set_ylabel(col)
+                        ax.grid(True, alpha=0.3)
+                    
+                    # Hide unused subplots
+                    for i in range(n_features_to_plot, 4):
+                        axes[i].set_visible(False)
+                    
+                    plt.suptitle('Feature Distributions by Cluster', fontsize=16, fontweight='bold')
+                    plt.tight_layout()
+                    
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+                    
+                    visualizations.append({
+                        "title": "Feature Distributions by Cluster",
+                        "image": image_base64,
+                        "type": "cluster_features"
+                    })
+                    
+                    # 4. Cluster Centers Heatmap
+                    if len(numeric_cols) >= 3:
+                        fig, ax = plt.subplots(figsize=(12, 6))
+                        
+                        # Get cluster centers in original scale
+                        centers_original = scaler.inverse_transform(kmeans.cluster_centers_)
+                        
+                        # Create heatmap
+                        im = ax.imshow(centers_original.T, cmap='RdYlBu_r', aspect='auto')
+                        
+                        # Set ticks and labels
+                        ax.set_xticks(range(n_clusters))
+                        ax.set_xticklabels([f'Cluster {i+1}' for i in range(n_clusters)])
+                        ax.set_yticks(range(len(numeric_cols)))
+                        ax.set_yticklabels(numeric_cols)
+                        
+                        # Add text annotations
+                        for i in range(n_clusters):
+                            for j in range(len(numeric_cols)):
+                                text = ax.text(i, j, f'{centers_original[i, j]:.2f}',
+                                             ha="center", va="center", color="black", fontweight='bold')
+                        
+                        ax.set_title('Cluster Centers (Feature Averages)', fontsize=14, fontweight='bold', pad=20)
+                        
+                        # Add colorbar
+                        cbar = plt.colorbar(im, ax=ax)
+                        cbar.set_label('Feature Value', fontweight='bold')
+                        
+                        plt.tight_layout()
+                        
+                        buffer = BytesIO()
+                        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+                        buffer.seek(0)
+                        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+                        plt.close()
+                        
+                        visualizations.append({
+                            "title": "Cluster Centers Heatmap",
+                            "image": image_base64,
+                            "type": "cluster_centers"
+                        })
                     
                     cluster_info = []
                     for i in range(n_clusters):
@@ -1503,7 +1688,14 @@ async def mcp_machine_learning(file: UploadFile = File(...)):
 💡 Insights:
   • Clusters represent groups of similar data points
   • Lower inertia indicates better cluster cohesion
-  • Each cluster has distinct characteristics in the features""",
+  • Each cluster has distinct characteristics in the features
+  • Generated {len(visualizations)} visualization charts
+
+📈 Visualizations Generated:
+  • Cluster scatter plot showing spatial distribution
+  • Distribution chart showing cluster sizes
+  • Feature comparison box plots by cluster
+  • Cluster centers heatmap showing feature averages""",
                         "data": convert_numpy_types({
                             "model_type": "K-Means Clustering",
                             "n_clusters": n_clusters,
@@ -1513,7 +1705,9 @@ async def mcp_machine_learning(file: UploadFile = File(...)):
                                 f"Cluster {i+1}": int(sum(clusters == i))
                                 for i in range(n_clusters)
                             },
-                            "n_iterations": int(kmeans.n_iter_)
+                            "n_iterations": int(kmeans.n_iter_),
+                            "cluster_centers": centers_original.tolist(),
+                            "visualizations_generated": len(visualizations)
                         })
                     }
                 else:
@@ -1564,7 +1758,7 @@ Numeric columns found: {len(numeric_cols)}
         return MCPAnalysisResponse(
             status="success",
             results=results,
-            visualizations=[]
+            visualizations=visualizations if 'visualizations' in locals() else []
         )
         
     except Exception as e:

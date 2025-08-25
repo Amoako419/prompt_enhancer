@@ -1109,6 +1109,41 @@
   font-size: 0.9rem;
 }
 
+/* ML Visualizations Section */
+.ml-visualizations {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #2d3748;
+}
+
+.ml-visualizations h4 {
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+}
+
+.ml-visualizations .visualizations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+}
+
+.ml-visualizations .visualization-item {
+  background: linear-gradient(145deg, rgba(13, 24, 44, 0.7) 0%, rgba(13, 24, 44, 0.9) 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(58, 107, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.ml-visualizations .visualization-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: rgba(58, 107, 255, 0.3);
+}
+
 /* Legacy ML Styles */
 .model-item {
   background: #1a1f2e;

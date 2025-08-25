@@ -524,8 +524,8 @@ export const StatisticalTests = ({ title, content, test_results, tests, rawData 
   );
 };
 
-export const MLModelResults = ({ title, content, model_data, models, rawData }) => {
-  console.log("MLModelResults received data:", { title, content, model_data, models, rawData });
+export const MLModelResults = ({ title, content, model_data, models, visualizations, rawData }) => {
+  console.log("MLModelResults received data:", { title, content, model_data, models, visualizations, rawData });
   
   // Handle new API format with title, content, and model_data
   if (title && content && model_data) {
@@ -597,6 +597,59 @@ export const MLModelResults = ({ title, content, model_data, models, rawData }) 
             </div>
           )}
         </div>
+        
+        {/* Display ML Visualizations */}
+        {visualizations && visualizations.length > 0 && (
+          <div className="ml-visualizations">
+            <h4>Machine Learning Visualizations</h4>
+            <div className="visualizations-grid">
+              {visualizations.map((viz, idx) => (
+                <div key={idx} className="visualization-item">
+                  <div className="viz-header-item">
+                    <div className="viz-icon">
+                      {viz.type === 'cluster_scatter' && <TrendingUp size={18} />}
+                      {viz.type === 'cluster_distribution' && <BarChart3 size={18} />}
+                      {viz.type === 'cluster_features' && <LineChart size={18} />}
+                      {viz.type === 'cluster_centers' && <PieChart size={18} />}
+                      {!['cluster_scatter', 'cluster_distribution', 'cluster_features', 'cluster_centers'].includes(viz.type) && <BarChart3 size={18} />}
+                    </div>
+                    <h4>{viz.title}</h4>
+                  </div>
+                  
+                  {viz.image ? (
+                    <div className="viz-image-container">
+                      <img 
+                        src={`data:image/png;base64,${viz.image}`}
+                        alt={viz.title}
+                        className="viz-image"
+                        onError={(e) => {
+                          console.error("Failed to load ML image for:", viz.title);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="viz-fallback" style={{ display: 'none' }}>
+                        <div className="fallback-content">
+                          <PieChart size={48} className="text-gray-400" />
+                          <p>Failed to load visualization</p>
+                          <p className="text-sm">Type: {viz.type}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="viz-placeholder">
+                      <div className="placeholder-content">
+                        <PieChart size={48} className="text-gray-400" />
+                        <p>No image data available</p>
+                        <p className="text-sm">Type: {viz.type}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         {rawData && (
           <div className="debug-section">
