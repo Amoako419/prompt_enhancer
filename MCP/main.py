@@ -157,15 +157,46 @@ def load_csv_from_content(content: str, filename: str, dataset_name: str = "main
         if len(lines) < 2:
             return {"error": "CSV file must contain at least 2 rows"}
         
-        # Try to auto-detect headers
+        # Improved header detection
         first_row = lines[0].split(',')
         second_row = lines[1].split(',') if len(lines) > 1 else []
         
-        # Check if first row looks like headers (contains non-numeric strings)
-        has_headers = any(not cell.strip().replace('.', '').replace('-', '').isdigit() 
-                         for cell in first_row if cell.strip())
+        # Multiple criteria for header detection
+        has_headers = False
         
-        # Load the CSV file with appropriate header setting
+        # Criterion 1: Check if first row contains non-numeric strings
+        non_numeric_in_first = any(
+            not cell.strip().replace('.', '').replace('-', '').replace('+', '').isdigit() 
+            and cell.strip() != '' 
+            for cell in first_row
+        )
+        
+        # Criterion 2: Check if first row contains common header-like words
+        header_words = ['id', 'name', 'date', 'time', 'sales', 'quantity', 'price', 'amount', 'total', 'count']
+        contains_header_words = any(
+            any(word in cell.strip().lower() for word in header_words)
+            for cell in first_row
+        )
+        
+        # Criterion 3: If second row is more numeric than first row
+        if len(second_row) == len(first_row):
+            first_row_numeric_count = sum(
+                1 for cell in first_row 
+                if cell.strip().replace('.', '').replace('-', '').isdigit()
+            )
+            second_row_numeric_count = sum(
+                1 for cell in second_row 
+                if cell.strip().replace('.', '').replace('-', '').isdigit()
+            )
+            second_more_numeric = second_row_numeric_count > first_row_numeric_count
+        else:
+            second_more_numeric = False
+        
+        # Final decision: headers detected if any criterion is met
+        has_headers = non_numeric_in_first or contains_header_words or second_more_numeric
+        
+        # Reset StringIO and load the CSV file with appropriate header setting
+        csv_io = StringIO(content)
         if has_headers:
             df = pd.read_csv(csv_io, **kwargs)
         else:

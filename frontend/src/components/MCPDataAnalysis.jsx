@@ -288,6 +288,55 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         );
       }
 
+      // Check if it has columns_info property (from MCP server response)
+      if (data.columns_info && typeof data.columns_info === 'object') {
+        const columns = Object.keys(data.columns_info);
+        return (
+          <div className="data-table-container">
+            <h5>{title} - Column Information</h5>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Column Name</th>
+                    <th>Data Type</th>
+                    <th>Non-Null Count</th>
+                    <th>Sample Values</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {columns.map((colName, index) => {
+                    const colInfo = data.columns_info[colName];
+                    return (
+                      <tr key={index}>
+                        <td><strong>{colName}</strong></td>
+                        <td>{colInfo.dtype || 'Unknown'}</td>
+                        <td>{colInfo.non_null_count || 'N/A'}</td>
+                        <td>{
+                          colInfo.sample_values ? 
+                            colInfo.sample_values.slice(0, 3).join(', ') + 
+                            (colInfo.sample_values.length > 3 ? '...' : '') : 
+                            'N/A'
+                        }</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            
+            {data.shape && (
+              <div className="dataset-summary">
+                <p><strong>Dataset Shape:</strong> {data.shape[0]} rows × {data.shape[1]} columns</p>
+                {data.missing_values && (
+                  <p><strong>Missing Values:</strong> {JSON.stringify(data.missing_values)}</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+
       // Check if it's statistics data
       if (data.describe || data.summary || data.statistics) {
         const statsData = data.describe || data.summary || data.statistics;
@@ -382,11 +431,19 @@ export default function MCPDataAnalysis({ onBackToTools }) {
       <div className="results-section">
         <h3 className="results-title">Analysis Results</h3>
         
-        {/* Status Display */}
-        {results.status && (
-          <div className="result-card">
-            <h4>Status</h4>
-            <pre className="result-text">{results.status}</pre>
+        {/* Status Display - only show if status is error */}
+        {results.status === "error" && (
+          <div className="result-card error">
+            <h4>Error</h4>
+            <pre className="result-text">{results.message || "An unknown error occurred"}</pre>
+          </div>
+        )}
+
+        {/* Success message */}
+        {results.status === "success" && results.message && (
+          <div className="result-card success">
+            <h4>✅ Success</h4>
+            <p className="result-text">{results.message}</p>
           </div>
         )}
 
@@ -399,9 +456,79 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         )}
 
         {/* Enhanced data display with tables */}
-        {results.results && results.results.data && (
+        {results.results && (results.results.data || results.results.preview) && (
           <div className="result-card">
-            {renderDataTable(results.results.data, "Dataset Information")}
+            
+            {/* Show preview data as main table if available */}
+            {results.results.preview && (
+              <>
+                {renderDataTable(results.results.preview, "Data Preview (First 5 rows)")}
+              </>
+            )}
+            
+            {/* Show dataset summary info if available */}
+            {(results.results.filename || results.results.shape || results.results.columns) && (
+              <div className="data-table-container">
+                <h5>Dataset Summary</h5>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <tbody>
+                      {results.results.filename && (
+                        <tr>
+                          <td><strong>Filename</strong></td>
+                          <td>{results.results.filename}</td>
+                        </tr>
+                      )}
+                      {results.results.shape && (
+                        <tr>
+                          <td><strong>Shape</strong></td>
+                          <td>{results.results.shape[0]} rows × {results.results.shape[1]} columns</td>
+                        </tr>
+                      )}
+                      {results.results.has_headers !== undefined && (
+                        <tr>
+                          <td><strong>Headers Detected</strong></td>
+                          <td>{results.results.has_headers ? 'Yes' : 'No'}</td>
+                        </tr>
+                      )}
+                      {results.results.columns && (
+                        <tr>
+                          <td><strong>Columns</strong></td>
+                          <td>{Array.isArray(results.results.columns) ? results.results.columns.join(', ') : 'N/A'}</td>
+                        </tr>
+                      )}
+                      {results.results.memory_usage && (
+                        <tr>
+                          <td><strong>Memory Usage</strong></td>
+                          <td>{(results.results.memory_usage / 1024).toFixed(2)} KB</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* Show column information if available */}
+            {results.results.columns_info && (
+              <>
+                {renderDataTable({columns_info: results.results.columns_info}, "Column Details")}
+              </>
+            )}
+            
+            {/* Show dataset metadata if available */}
+            {results.results.data && (
+              <>
+                {renderDataTable(results.results.data, "Dataset Information")}
+              </>
+            )}
+            
+            {/* If neither preview nor data, fall back to any results.data */}
+            {!results.results.preview && !results.results.data && results.results && (
+              <>
+                {renderDataTable(results.results, "Analysis Results")}
+              </>
+            )}
           </div>
         )}
 

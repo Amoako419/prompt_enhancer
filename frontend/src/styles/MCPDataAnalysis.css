@@ -1123,6 +1123,25 @@ details summary:hover {
   white-space: pre-wrap;
 }
 
+/* Success and Error states */
+.result-card.success {
+  border-left: 4px solid #28a745;
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.result-card.error {
+  border-left: 4px solid #dc3545;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.result-card.success h4 {
+  color: #28a745;
+}
+
+.result-card.error h4 {
+  color: #dc3545;
+}
+
 /* Responsive table design */
 @media (max-width: 768px) {
   .data-table {

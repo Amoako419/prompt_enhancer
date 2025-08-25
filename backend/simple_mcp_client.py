@@ -20,6 +20,17 @@ sys.path.insert(0, str(mcp_dir))
 
 # Import MCP server functions directly
 try:
+    # Import from the MCP main module
+    import sys
+    import os
+    from pathlib import Path
+    
+    # Add MCP directory to Python path
+    mcp_dir = Path(__file__).parent.parent / "MCP"
+    if str(mcp_dir) not in sys.path:
+        sys.path.insert(0, str(mcp_dir))
+    
+    # Now import the MCP functions
     from main import (
         mcp,
         load_data,
@@ -32,8 +43,20 @@ try:
         train_ml_model,
         suggest_chart_types
     )
-    from mcp.server.fastmcp.utilities.types import Image
+    
+    # Try to import Image type - this might fail but that's okay
+    try:
+        from mcp.server.fastmcp.utilities.types import Image
+    except ImportError:
+        # Define a fallback Image class
+        class Image:
+            def __init__(self, data, media_type="image/png"):
+                self.data = data
+                self.media_type = media_type
+    
     AVAILABLE = True
+    print("MCP server functions imported successfully")
+    
 except ImportError as e:
     print(f"Warning: Could not import MCP server functions: {e}")
     mcp = None

@@ -99,7 +99,10 @@ async def load_data(file: UploadFile = File(...)):
             dataset_name="main"
         )
         
-        if "error" in result:
+        print(f"DEBUG: MCP result keys: {list(result.keys()) if isinstance(result, dict) else 'not a dict'}")
+        print(f"DEBUG: MCP result error check: {'error' in result if isinstance(result, dict) else 'N/A'}")
+        
+        if isinstance(result, dict) and "error" in result:
             response = {
                 "status": "error",
                 "message": result["error"],
@@ -108,6 +111,7 @@ async def load_data(file: UploadFile = File(...)):
         else:
             # Serialize the result for JSON response
             serialized_result = serialize_for_json(result)
+            print(f"DEBUG: Serialized result keys: {list(serialized_result.keys()) if isinstance(serialized_result, dict) else 'not a dict'}")
             response = {
                 "status": "success",
                 "message": f"Data loaded successfully from {file.filename}",
