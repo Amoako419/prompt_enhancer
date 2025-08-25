@@ -19,7 +19,7 @@
   gap: 2rem;
 }
 
-.input-section, .output-section, .examples-section {
+.scinput-section, .output-section, .examples-section {
   background: #fff;
   border: 1px solid var(--border-color);
   border-radius: 12px;
