@@ -14,9 +14,9 @@
   align-items: center;
   justify-content: space-between;
   background: #1a1f2e;
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid #2d3748;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  position: static;
 }
 
 .mcp-data-analysis-header h2 {
@@ -101,21 +101,18 @@
 /* Analysis Container */
 .mcp-analysis-container {
   display: flex;
-  position: static;
+  min-height: calc(100vh - 10rem);
 }
 
 /* Sidebar */
 .mcp-sidebar {
-  width: 400px;
+  width: 600px;
   padding: 1.5rem;
   background: rgba(0, 0, 0, 0.2);
   border-right: 1px solid #2d3748;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  position: static;
-  max-height: 100vh;
-  overflow-y: auto;
 }
 
 .mcp-upload-section h3, 
@@ -373,25 +370,6 @@
   padding: 3rem;
   color: #9ca3af;
   text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 0.5rem;
-  border: 1px solid #2d3748;
-  min-height: 200px;
-}
-
-.mcp-no-results p {
-  font-size: 1rem;
-  color: #ffffff;
-  margin: 0;
-}
-
-/* Error/Warning text color */
-.text-warning {
-  color: #f59e0b !important;
-}
-
-.text-muted {
-  color: #9ca3af !important;
 }
 
 /* Responsive Design */
