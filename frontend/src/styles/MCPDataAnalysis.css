@@ -14,9 +14,9 @@
   align-items: center;
   justify-content: space-between;
   background: #1a1f2e;
-  backdrop-filter: blur(10px);
   border-bottom: 1px solid #2d3748;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  position: static;
 }
 
 .mcp-data-analysis-header h2 {
@@ -101,18 +101,21 @@
 /* Analysis Container */
 .mcp-analysis-container {
   display: flex;
-  min-height: calc(100vh - 10rem);
+  position: static;
 }
 
 /* Sidebar */
 .mcp-sidebar {
-  width: 300px;
+  width: 400px;
   padding: 1.5rem;
   background: rgba(0, 0, 0, 0.2);
   border-right: 1px solid #2d3748;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  position: static;
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 .mcp-upload-section h3, 

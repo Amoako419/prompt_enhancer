@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, PieChart, TrendingUp, LineChart, AlertCircle, X, ZoomIn, Download } from 'lucide-react';
+import { BarChart3, PieChart, TrendingUp, LineChart, AlertCircle, X, ZoomIn, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import '../styles/MCPAnalysisTypes.css';
 
 // Image Modal Component
@@ -587,6 +587,8 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
     type: ''
   });
 
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false);
+
   const openModal = (imageSrc, title, type) => {
     setModalState({
       isOpen: true,
@@ -604,6 +606,10 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
       type: ''
     });
   };
+
+  const toggleSummary = () => {
+    setIsSummaryCollapsed(!isSummaryCollapsed);
+  };
   
   // Handle new API format with title, content, and model_data
   if (title && content && model_data) {
@@ -614,7 +620,17 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
         </div>
         
         <div className="ml-summary">
-          <pre className="formatted-content">{content}</pre>
+          <div className="ml-summary-header" onClick={toggleSummary}>
+            <h4>Summary</h4>
+            <button className="collapse-btn" type="button">
+              {isSummaryCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+            </button>
+          </div>
+          {!isSummaryCollapsed && (
+            <div className="ml-summary-content">
+              <pre className="formatted-content">{content}</pre>
+            </div>
+          )}
         </div>
         
         <div className="ml-details">
@@ -734,16 +750,6 @@ export const MLModelResults = ({ title, content, model_data, models, visualizati
             </div>
           </div>
         )}
-        
-        {rawData && (
-          <div className="debug-section">
-            <details>
-              <summary>Debug: Raw API Response</summary>
-              <pre className="formatted-content">{JSON.stringify(rawData, null, 2)}</pre>
-            </details>
-          </div>
-        )}
-
         <ImageModal
           isOpen={modalState.isOpen}
           onClose={closeModal}

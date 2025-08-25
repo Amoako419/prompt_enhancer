@@ -1474,3 +1474,72 @@
     opacity: 0.8;
   }
 }
+
+/* Collapsible ML Summary Styles */
+.ml-summary {
+  background: #1a1f2e;
+  border: 1px solid #2d3748;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.ml-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #2d3748;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.ml-summary-header:hover {
+  background: #374151;
+}
+
+.ml-summary-header h4 {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-btn:hover {
+  color: #ffffff;
+  background: rgba(96, 165, 250, 0.2);
+}
+
+.ml-summary-content {
+  padding: 1rem;
+  animation: expandIn 0.3s ease;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
