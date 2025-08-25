@@ -1,0 +1,25 @@
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 16px;
+  }
+  
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+}
+
+/* Safari-specific fix */
+@supports (-webkit-overflow-scrolling: touch) {
+  .user-avatar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .avatar-letter {
+    position: static;
+  }
+}

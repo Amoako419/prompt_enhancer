@@ -61,7 +61,7 @@ export default function AITools({ onNavigateToEnhancer, onNavigateToSqlConverter
       <header className="tools-header">
         <div className="hero-section">
           <h1 className="hero-title">
-            Professional AI Tools Suite
+            🚀 Professional AI Tools Suite
             <span className="title-gradient"> for Data Professionals</span>
           </h1>
           <p className="hero-subtitle">
