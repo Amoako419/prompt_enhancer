@@ -199,47 +199,6 @@ export default function MCPDataAnalysis({ onBackToTools }) {
   // Prepare data for Data Preview
   const prepareDataPreviewProps = () => {
     if (results?.results?.data) {
-      const apiData = results.results.data;
-      
-      // Handle the actual API response format
-      if (apiData.preview && apiData.columns) {
-        // Convert the preview object format to array of rows
-        const preview = apiData.preview;
-        const columns = apiData.columns;
-        
-        // Get the number of rows (assuming all columns have the same number of entries)
-        const firstColumn = Object.keys(preview)[0];
-        const rowCount = firstColumn ? Object.keys(preview[firstColumn]).length : 0;
-        
-        // Convert to array of row objects
-        const rows = [];
-        for (let i = 0; i < rowCount; i++) {
-          const row = {};
-          columns.forEach(column => {
-            row[column] = preview[column] ? preview[column][i.toString()] : null;
-          });
-          rows.push(row);
-        }
-        
-        // Create column info
-        const columnInfo = columns.map(col => ({
-          name: col,
-          type: 'mixed', // We could infer types if needed
-          description: ''
-        }));
-        
-        console.log("Converted rows:", rows);
-        console.log("Column info:", columnInfo);
-        
-        return {
-          data: {
-            rows: rows,
-            columns: columnInfo
-          }
-        };
-      }
-      
-      // Fallback to the old format if the structure is different
       const tableData = tryParseTableData(results.results.data);
       const metadata = results.results.metadata || {
         filename: selectedFile ? selectedFile.name : "",
@@ -247,16 +206,15 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         columnCount: ""
       };
       
+      // Create the format expected by DataPreview component
       return {
-        data: {
-          rows: tableData,
-          columns: metadata.columnInfo || (Array.isArray(metadata.columnCount) ? 
-            metadata.columnCount.map((col, idx) => ({
-              name: col.name || `Column ${idx+1}`,
-              type: col.type || 'unknown',
-              description: col.description || ''
-            })) : [])
-        }
+        rows: tableData,
+        columns: metadata.columnInfo || (Array.isArray(metadata.columnCount) ? 
+          metadata.columnCount.map((col, idx) => ({
+            name: col.name || `Column ${idx+1}`,
+            type: col.type || 'unknown',
+            description: col.description || ''
+          })) : [])
       };
     }
     return null;
@@ -264,81 +222,34 @@ export default function MCPDataAnalysis({ onBackToTools }) {
 
   // Prepare data for Statistical Analysis
   const prepareStatsAnalysisProps = () => {
-    console.log("prepareStatsAnalysisProps - Full results:", results);
-    
-    // Handle the exact API format you provided
-    if (results?.results) {
-      const resultsData = results.results;
-      console.log("Results data:", resultsData);
-      
-      // Check if we have the new format with title, content, and data.statistics
-      if (resultsData.title && resultsData.content && resultsData.data?.statistics) {
-        console.log("Found new API format with statistics");
-        return {
-          statistics: resultsData.data.statistics,
-          numeric_columns: resultsData.data.numeric_columns,
-          title: resultsData.title,
-          content: resultsData.content
-        };
-      }
-      
-      // Check for older formats
-      if (resultsData.data?.statistics) {
-        console.log("Found statistics in data");
-        return {
-          statistics: resultsData.data.statistics,
-          numeric_columns: resultsData.data.numeric_columns,
-          title: resultsData.title,
-          content: resultsData.content
-        };
-      }
-      
-      // Even if no structured statistics, pass whatever we have for debugging
-      console.log("No structured statistics found, passing raw data for debugging");
+    if (results?.results?.statistics) {
+      const stats = results.results.statistics;
       return {
-        rawData: resultsData,
-        title: resultsData.title,
-        content: resultsData.content
+        numeric: Object.entries(stats.numerical_stats || {}).map(([variable, values]) => ({
+          variable,
+          count: values.count,
+          mean: values.mean,
+          std: values.std,
+          min: values.min,
+          percentile25: values["25%"],
+          median: values["50%"],
+          percentile75: values["75%"],
+          max: values.max
+        })),
+        categorical: Object.entries(stats.categorical_counts || {}).map(([variable, counts]) => ({
+          variable,
+          counts: Object.entries(counts).map(([category, count]) => ({
+            category,
+            count
+          }))
+        }))
       };
     }
-    
-    console.log("No results data found");
     return null;
   };
 
   // Prepare data for Correlation Analysis
   const prepareCorrelationProps = () => {
-    console.log("prepareCorrelationProps - Full results:", results);
-    
-    // Handle new API format with correlation_matrix
-    if (results?.results?.data?.correlation_matrix) {
-      const corrMatrix = results.results.data.correlation_matrix;
-      console.log("Found correlation matrix:", corrMatrix);
-      
-      // Extract variable names from the matrix keys
-      const variables = Object.keys(corrMatrix);
-      
-      // Create the correlation matrix as 2D array
-      const correlations = variables.map(rowVar => 
-        variables.map(colVar => {
-          return corrMatrix[rowVar] && corrMatrix[rowVar][colVar] !== undefined 
-            ? corrMatrix[rowVar][colVar] 
-            : 0;
-        })
-      );
-      
-      console.log("Correlation data prepared:", { variables, correlations });
-      
-      return {
-        variables,
-        correlations,
-        title: results.results.title,
-        content: results.results.content,
-        strong_correlations: results.results.data.strong_correlations
-      };
-    }
-    
-    // Handle old format
     if (results?.results?.correlations) {
       const corrData = results.results.correlations;
       
@@ -362,108 +273,48 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         correlations
       };
     }
-    
-    console.log("No correlation data found");
     return null;
   };
 
   // Prepare data for Statistical Tests
   const prepareTestsProps = () => {
-    console.log("Preparing tests props from:", results);
-    
-    // Handle the new API format
-    if (results?.results) {
-      const resultsData = results.results;
-      
-      // Check if we have the new format with title, content, and data
-      if (resultsData.title && resultsData.content && resultsData.data) {
-        return {
-          title: resultsData.title,
-          content: resultsData.content,
-          test_results: resultsData.data.test_results || [],
-          rawData: resultsData.data
-        };
-      }
-      
-      // Fallback for old format
-      if (resultsData.tests) {
-        return {
-          tests: resultsData.tests.map(test => ({
-            name: test.name,
-            results: test.results || test.result // Handle both field names
-          }))
-        };
-      }
+    if (results?.results?.tests) {
+      return {
+        tests: results.results.tests.map(test => ({
+          name: test.name,
+          results: test.results || test.result // Handle both field names
+        }))
+      };
     }
-    
-    console.log("No test data found");
     return null;
   };
 
   // Prepare data for ML Model Results
   const prepareMLModelProps = () => {
-    console.log("Preparing ML props from:", results);
-    
-    // Handle the new API format
-    if (results?.results) {
-      const resultsData = results.results;
-      
-      // Check if we have the new format with title, content, and data
-      if (resultsData.title && resultsData.content && resultsData.data) {
-        return {
-          title: resultsData.title,
-          content: resultsData.content,
-          model_data: resultsData.data,
-          rawData: resultsData
-        };
-      }
-      
-      // Fallback for old format
-      if (resultsData.models) {
-        return {
-          models: resultsData.models.map(model => ({
-            name: model.name,
-            metrics: model.metrics,
-            featureImportance: model.feature_importance ? 
-              Object.entries(model.feature_importance).map(([feature, importance]) => ({
-                feature,
-                importance
-              })) : [],
-            predictions: model.predictions ? 
-              model.predictions.map((pred, idx) => ({
-                id: idx,
-                actual: pred.actual,
-                predicted: pred.predicted
-              })) : []
-          }))
-        };
-      }
+    if (results?.results?.models) {
+      return {
+        models: results.results.models.map(model => ({
+          name: model.name,
+          metrics: model.metrics,
+          featureImportance: model.feature_importance ? 
+            Object.entries(model.feature_importance).map(([feature, importance]) => ({
+              feature,
+              importance
+            })) : [],
+          predictions: model.predictions ? 
+            model.predictions.map((pred, idx) => ({
+              id: idx,
+              actual: pred.actual,
+              predicted: pred.predicted
+            })) : []
+        }))
+      };
     }
-    
-    console.log("No ML model data found");
     return null;
   };
 
   // Prepare data for Visualizations
   const prepareVisualizationsProps = () => {
-    console.log("Preparing visualization props from:", results);
-    
-    // Handle the new API format where visualizations are at the top level
-    if (results?.visualizations && results.visualizations.length > 0) {
-      console.log("Found visualizations:", results.visualizations);
-      return {
-        title: results.results?.title || "Data Visualizations",
-        content: results.results?.content || "",
-        visualizations: results.visualizations.map(viz => ({
-          type: viz.type,
-          title: viz.title,
-          image: viz.image, // base64 encoded image
-          data: viz.data
-        }))
-      };
-    }
-    
-    // Fallback for old format
     if (results?.results?.visualizations) {
       return {
         visualizations: results.results.visualizations.map(viz => ({
@@ -474,8 +325,6 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         }))
       };
     }
-    
-    console.log("No visualization data found");
     return null;
   };
 
@@ -497,12 +346,8 @@ export default function MCPDataAnalysis({ onBackToTools }) {
   const renderResults = () => {
     if (!results) return null;
     
-    console.log("Rendering results:", results);
-    console.log("Analysis type:", analysis);
-    
     // Error handling if no results available
     if (!results.results) {
-      console.log("No results.results found");
       return (
         <div className="mcp-no-results">
           <AlertCircle size={36} className="text-warning" />
@@ -515,78 +360,39 @@ export default function MCPDataAnalysis({ onBackToTools }) {
     switch(analysis) {
       case 'load_data':
         const dataPreviewProps = prepareDataPreviewProps();
-        console.log("DataPreview props:", dataPreviewProps);
         return dataPreviewProps ? 
           <DataPreview {...dataPreviewProps} /> : 
           <div className="mcp-no-results"><p>No preview data available</p></div>;
       
       case 'descriptive_stats':
         const statsProps = prepareStatsAnalysisProps();
-        console.log("Stats props:", statsProps);
-        console.log("Full results structure:", JSON.stringify(results, null, 2));
         return statsProps ? 
-          <StatisticalAnalysis data={statsProps} /> : 
-          <div className="mcp-no-results">
-            <p>No statistical data available</p>
-            <p>Debug: Check console for full data structure</p>
-          </div>;
+          <StatisticalAnalysis {...statsProps} /> : 
+          <div className="mcp-no-results"><p>No statistical data available</p></div>;
       
       case 'correlation_analysis':
         const corrProps = prepareCorrelationProps();
-        console.log("Correlation props:", corrProps);
-        console.log("Full results structure for correlation:", JSON.stringify(results, null, 2));
         return corrProps ? 
-          <CorrelationAnalysis data={corrProps} /> : 
-          <div className="mcp-no-results">
-            <p>No correlation data available</p>
-            <p>Debug: Check console for full data structure</p>
-          </div>;
+          <CorrelationAnalysis {...corrProps} /> : 
+          <div className="mcp-no-results"><p>No correlation data available</p></div>;
       
       case 'hypothesis_testing':
         const testsProps = prepareTestsProps();
-        console.log("Tests props prepared:", testsProps);
         return testsProps ? 
-          <StatisticalTests 
-            title={testsProps.title}
-            content={testsProps.content}
-            test_results={testsProps.test_results}
-            tests={testsProps.tests}
-            rawData={testsProps.rawData}
-          /> : 
-          <div className="mcp-no-results">
-            <p>No test results available</p>
-            <p>Debug: Check console for API response structure</p>
-          </div>;
+          <StatisticalTests {...testsProps} /> : 
+          <div className="mcp-no-results"><p>No test results available</p></div>;
       
       case 'machine_learning':
         const mlProps = prepareMLModelProps();
-        console.log("ML props prepared:", mlProps);
         return mlProps ? 
-          <MLModelResults 
-            title={mlProps.title}
-            content={mlProps.content}
-            model_data={mlProps.model_data}
-            models={mlProps.models}
-            rawData={mlProps.rawData}
-          /> : 
-          <div className="mcp-no-results">
-            <p>No model results available</p>
-            <p>Debug: Check console for API response structure</p>
-          </div>;
+          <MLModelResults {...mlProps} /> : 
+          <div className="mcp-no-results"><p>No model results available</p></div>;
       
       case 'visualization':
         const vizProps = prepareVisualizationsProps();
-        console.log("Visualization props prepared:", vizProps);
         return vizProps ? 
-          <Visualizations 
-            title={vizProps.title}
-            content={vizProps.content}
-            visualizations={vizProps.visualizations}
-          /> : 
-          <div className="mcp-no-results">
-            <p>No visualization data available</p>
-            <p>Debug: Check console for API response structure</p>
-          </div>;
+          <Visualizations {...vizProps} /> : 
+          <div className="mcp-no-results"><p>No visualization data available</p></div>;
       
       default:
         return (

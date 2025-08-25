@@ -831,7 +831,7 @@ async def mcp_load_data(file: UploadFile = File(...)):
 {chr(10).join([f"  • {col} ({dtype})" for col, dtype in df.dtypes.astype(str).items()])}
 
 🔍 Data Preview (First 5 rows):
-{df.head().to_string()}
+{df.head(10).to_string()}
 
 ⚠️ Missing Values:
 {chr(10).join([f"  • {col}: {count} missing" for col, count in df.isnull().sum().items() if count > 0]) or "  • No missing values found"}

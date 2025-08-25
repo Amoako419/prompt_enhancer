@@ -370,25 +370,6 @@
   padding: 3rem;
   color: #9ca3af;
   text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 0.5rem;
-  border: 1px solid #2d3748;
-  min-height: 200px;
-}
-
-.mcp-no-results p {
-  font-size: 1rem;
-  color: #ffffff;
-  margin: 0;
-}
-
-/* Error/Warning text color */
-.text-warning {
-  color: #f59e0b !important;
-}
-
-.text-muted {
-  color: #9ca3af !important;
 }
 
 /* Responsive Design */
