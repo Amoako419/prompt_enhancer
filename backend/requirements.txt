@@ -1,6 +1,8 @@
 # FastAPI + server
 fastapi==0.116.0
 uvicorn[standard]==0.35.0
+pydantic[email]==2.11
+greenlet==3.2.4
 
 # Google Gemini SDK
 google-generativeai==0.8.2
@@ -11,11 +13,11 @@ python-dotenv==1.0.1
 # Authentication and Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.9
+python-multipart==0.0.20
 
 # Database
 sqlalchemy==2.0.31
-aiosqlite==0.20.0
+aiosqlite==0.21.0
 
 # Data generation
 faker==37.1.0

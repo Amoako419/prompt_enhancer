@@ -20,7 +20,7 @@ from database import get_db, engine, Base
 from models.models import User, Session, Memory
 
 # Import routers
-from routers import auth, memory, ai_memory
+from routers import auth, memory, ai_memory, custom_quiz
 
 # Load environment variables
 load_dotenv()
@@ -42,12 +42,13 @@ app.add_middleware(
 
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-2.0-flash-lite")
 
 # Include routers
 app.include_router(auth.router)
 app.include_router(memory.router)
 app.include_router(ai_memory.router)
+app.include_router(custom_quiz.router)
 
 # Database initialization
 @app.on_event("startup")
