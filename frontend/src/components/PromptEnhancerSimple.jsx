@@ -239,7 +239,7 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
                       )}
                     </button>
                     
-                    <button
+                    {/* <button
                       onClick={handleDirectSubmit}
                       disabled={!input.trim() || loadingEnhance || loadingReply}
                       className="send-btn"
@@ -250,7 +250,7 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
                       ) : (
                         <Send size={16} />
                       )}
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

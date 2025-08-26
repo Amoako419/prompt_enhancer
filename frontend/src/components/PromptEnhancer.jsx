@@ -368,13 +368,13 @@ export default function PromptEnhancer({ onBackToTools }) {
             {loadingEnhance ? <RotateCw size={18} className="spinning" /> : <Wand2 size={18} />}
           </button>
         </div>
-        <button className="send-btn" onClick={sendMessage} disabled={loadingReply}>
+        {/* <button className="send-btn" onClick={sendMessage} disabled={loadingReply}>
           {loadingReply ? "Thinking..." : (
             <>
               Send <Send size={16} style={{ marginLeft: 4 }} />
             </>
           )}
-        </button>
+        </button> */}
       </div>
 
       {/* ---------- enhancement dialog ---------- */}
