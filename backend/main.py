@@ -1841,9 +1841,176 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.post("/mcp/compare-datasets")
+async def mcp_compare_datasets(
+    fileA: UploadFile = File(...),
+    fileB: UploadFile = File(...),
+    analysis_type: str = None
+):
+    """
+    Compare two datasets with various analysis types
+    """
+    try:
+        # Read file content for both datasets
+        contentA = await fileA.read()
+        contentB = await fileB.read()
+        
+        # Process based on file types
+        dfA = None
+        dfB = None
+        
+        if fileA.filename.endswith('.csv'):
+            dfA = pd.read_csv(io.StringIO(contentA.decode('utf-8')))
+        elif fileA.filename.endswith('.json'):
+            dfA = pd.read_json(io.StringIO(contentA.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type for Dataset A")
+            
+        if fileB.filename.endswith('.csv'):
+            dfB = pd.read_csv(io.StringIO(contentB.decode('utf-8')))
+        elif fileB.filename.endswith('.json'):
+            dfB = pd.read_json(io.StringIO(contentB.decode('utf-8')))
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type for Dataset B")
+        
+        # Dataset metadata
+        dataset_info = {
+            "primary": {
+                "filename": fileA.filename,
+                "row_count": dfA.shape[0],
+                "column_count": dfA.shape[1],
+                "columns": [{"name": col, "type": str(dtype)} for col, dtype in dfA.dtypes.items()],
+                "memory_usage": int(dfA.memory_usage(deep=True).sum()),
+                "missing_values": {col: int(count) for col, count in dfA.isnull().sum().items() if count > 0}
+            },
+            "secondary": {
+                "filename": fileB.filename,
+                "row_count": dfB.shape[0],
+                "column_count": dfB.shape[1],
+                "columns": [{"name": col, "type": str(dtype)} for col, dtype in dfB.dtypes.items()],
+                "memory_usage": int(dfB.memory_usage(deep=True).sum()),
+                "missing_values": {col: int(count) for col, count in dfB.isnull().sum().items() if count > 0}
+            }
+        }
+        
+        # Generate comparison results based on analysis type
+        comparison_results = {}
+        
+        if analysis_type == "load_data" or analysis_type == "dataset_comparison":
+            # Basic dataset comparison
+            primary_cols = set(dfA.columns)
+            secondary_cols = set(dfB.columns)
+            
+            comparison_results = {
+                "column_comparison": {
+                    "common": list(primary_cols.intersection(secondary_cols)),
+                    "unique_to_primary": list(primary_cols - secondary_cols),
+                    "unique_to_secondary": list(secondary_cols - primary_cols)
+                },
+                "row_difference": dfA.shape[0] - dfB.shape[0],
+                "row_difference_percent": round((dfA.shape[0] - dfB.shape[0]) / dfA.shape[0] * 100 if dfA.shape[0] > 0 else 0, 2)
+            }
+            
+        elif analysis_type == "descriptive_stats":
+            # Statistical comparison for common numeric columns
+            common_cols = set(dfA.columns).intersection(set(dfB.columns))
+            numeric_cols = [col for col in common_cols if 
+                            pd.api.types.is_numeric_dtype(dfA[col]) and 
+                            pd.api.types.is_numeric_dtype(dfB[col])]
+            
+            if not numeric_cols:
+                comparison_results = {
+                    "error": "No common numeric columns found between datasets"
+                }
+            else:
+                stats_comparison = {}
+                for col in numeric_cols:
+                    stats_A = dfA[col].describe()
+                    stats_B = dfB[col].describe()
+                    
+                    # Calculate differences
+                    diff = {}
+                    for stat in stats_A.index:
+                        if stat in stats_B:
+                            diff[stat] = stats_A[stat] - stats_B[stat]
+                            
+                    stats_comparison[col] = {
+                        "primary": stats_A.to_dict(),
+                        "secondary": stats_B.to_dict(),
+                        "difference": diff
+                    }
+                    
+                comparison_results = {
+                    "statistics_comparison": convert_numpy_types(stats_comparison)
+                }
+                
+        elif analysis_type == "correlation_analysis":
+            # Correlation comparison for common numeric columns
+            common_cols = set(dfA.columns).intersection(set(dfB.columns))
+            numeric_cols = [col for col in common_cols if 
+                            pd.api.types.is_numeric_dtype(dfA[col]) and 
+                            pd.api.types.is_numeric_dtype(dfB[col])]
+            
+            if len(numeric_cols) < 2:
+                comparison_results = {
+                    "error": "Not enough common numeric columns for correlation comparison"
+                }
+            else:
+                # Calculate correlation matrices
+                corr_A = dfA[numeric_cols].corr().fillna(0).round(3)
+                corr_B = dfB[numeric_cols].corr().fillna(0).round(3)
+                
+                # Calculate correlation differences
+                corr_diff = corr_A - corr_B
+                
+                comparison_results = {
+                    "correlation_comparison": {
+                        "primary": corr_A.to_dict(),
+                        "secondary": corr_B.to_dict(),
+                        "difference": corr_diff.to_dict()
+                    }
+                }
+                
+        elif analysis_type == "visualization":
+            # Placeholder for visualization comparisons
+            comparison_results = {
+                "message": "Visualization comparison is not fully implemented yet"
+            }
+        
+        results = {
+            "title": f"Dataset Comparison: {fileA.filename} vs {fileB.filename}",
+            "content": f"""## Dataset Comparison Summary
+
+### Dataset A: {fileA.filename}
+- Rows: {dfA.shape[0]}
+- Columns: {dfA.shape[1]}
+
+### Dataset B: {fileB.filename}
+- Rows: {dfB.shape[0]}
+- Columns: {dfB.shape[1]}
+
+### Comparison Highlights
+- Row Count Difference: {dfA.shape[0] - dfB.shape[0]} rows ({abs(round((dfA.shape[0] - dfB.shape[0]) / max(dfA.shape[0], 1) * 100, 1))}%)
+- Column Count Difference: {dfA.shape[1] - dfB.shape[1]} columns
+- Common Columns: {len(set(dfA.columns).intersection(set(dfB.columns)))}
+- Unique to A: {len(set(dfA.columns) - set(dfB.columns))}
+- Unique to B: {len(set(dfB.columns) - set(dfA.columns))}
+""",
+            "datasets": dataset_info,
+            "comparison": convert_numpy_types(comparison_results)
+        }
+        
+        return MCPAnalysisResponse(
+            status="success",
+            results=results,
+            visualizations=[]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to compare datasets: {str(e)}")
+
 # For local testing
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
 
