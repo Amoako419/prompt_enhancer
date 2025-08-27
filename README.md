@@ -62,8 +62,6 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 #### 2.2 Install dependencies
 ```bash
 pip install -r requirements.txt
-# or manually
-pip install fastapi uvicorn google-generativeai python-dotenv
 ```
 
 #### 2.3 Environment variables

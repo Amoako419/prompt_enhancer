@@ -1,0 +1,121 @@
+/* Mode switch styles */
+.mcp-mode-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.75rem 2rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid #2d3748;
+}
+
+.mcp-mode-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #2d3748;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.mcp-mode-button.active {
+  background: #3182ce;
+  border-color: #3182ce;
+  box-shadow: 0 2px 6px rgba(49, 130, 206, 0.3);
+}
+
+.mcp-mode-button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Comparison datasets styles */
+.mcp-comparison-datasets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mcp-dataset-upload h4 {
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem 0;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.mcp-dataset-upload.primary h4 {
+  color: #3182ce;
+}
+
+.mcp-dataset-upload.secondary h4 {
+  color: #ed64a6;
+}
+
+.mcp-upload-zone.comparison {
+  height: 100px;
+  padding: 0.75rem;
+}
+
+.mcp-upload-zone.comparison p {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.mcp-upload-zone.comparison .mcp-upload-hint {
+  font-size: 0.75rem;
+}
+
+/* Analysis option badge */
+.mcp-analysis-option-badge {
+  background: rgba(237, 100, 166, 0.2);
+  color: #ed64a6;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+  display: inline-block;
+}
+
+/* Warning message */
+.mcp-warning-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.mcp-warning-message svg {
+  color: #ffc107;
+}
+
+.mcp-warning-message p {
+  color: #ffc107;
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+}
+
+/* Responsive design for comparison mode */
+@media (max-width: 768px) {
+  .mcp-comparison-datasets {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .mcp-mode-button {
+    min-width: auto;
+    flex: 1;
+  }
+}
