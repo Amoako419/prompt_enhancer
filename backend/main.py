@@ -20,7 +20,7 @@ from database import get_db, engine, Base
 from models.models import User, Session, Memory
 
 # Import routers
-from routers import auth, memory, ai_memory
+from routers import auth, memory, ai_memory, custom_quiz
 
 # Load environment variables
 load_dotenv()
@@ -42,12 +42,13 @@ app.add_middleware(
 
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-2.0-flash-lite")
 
 # Include routers
 app.include_router(auth.router)
 app.include_router(memory.router)
 app.include_router(ai_memory.router)
+app.include_router(custom_quiz.router)
 
 # Database initialization
 @app.on_event("startup")
@@ -288,6 +289,73 @@ async def convert_to_sql(request: SqlRequest):
             sql_query = sql_query[:-3]
         
         return SqlResponse(sql_query=sql_query.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class TsqlResponse(BaseModel):
+    tsql_query: str
+
+@app.post("/to-tsql", response_model=TsqlResponse)
+async def convert_to_tsql(request: SqlRequest):
+    """
+    Convert plain English query to T-SQL statement (Microsoft SQL Server dialect)
+    """
+    try:
+        tsql_instruction = (
+            "You are an expert T-SQL generator. Convert the following plain English query "
+            "into a well-formatted T-SQL statement for Microsoft SQL Server. Only return the T-SQL query without any "
+            "explanations or additional text. Use Microsoft SQL Server specific features when appropriate. "
+            "Assume common table names like 'users', 'orders', 'products', 'customers' etc. unless specified otherwise."
+        )
+        full_prompt = f"{tsql_instruction}\n\nEnglish Query: {request.english_query}"
+
+        response = model.generate_content(full_prompt)
+        tsql_query = response.text.strip()
+        
+        # Clean up the response to remove any markdown formatting
+        if tsql_query.startswith("```sql"):
+            tsql_query = tsql_query[6:]
+        if tsql_query.startswith("```"):
+            tsql_query = tsql_query[3:]
+        if tsql_query.endswith("```"):
+            tsql_query = tsql_query[:-3]
+        
+        return TsqlResponse(tsql_query=tsql_query.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class MongoResponse(BaseModel):
+    mongo_query: str
+
+@app.post("/to-mongo", response_model=MongoResponse)
+async def convert_to_mongo(request: SqlRequest):
+    """
+    Convert plain English query to MongoDB query
+    """
+    try:
+        mongo_instruction = (
+            "You are an expert MongoDB query generator. Convert the following plain English query "
+            "into a well-formatted MongoDB query. Return the query as a JavaScript object suitable "
+            "for use with MongoDB methods like find(), aggregate(), etc. Only return the MongoDB query without any "
+            "explanations or additional text. Assume common collection names like 'users', "
+            "'orders', 'products', 'customers' etc. unless specified otherwise."
+        )
+        full_prompt = f"{mongo_instruction}\n\nEnglish Query: {request.english_query}"
+
+        response = model.generate_content(full_prompt)
+        mongo_query = response.text.strip()
+        
+        # Clean up the response to remove any markdown formatting
+        if mongo_query.startswith("```javascript"):
+            mongo_query = mongo_query[13:]
+        elif mongo_query.startswith("```js"):
+            mongo_query = mongo_query[5:]
+        elif mongo_query.startswith("```"):
+            mongo_query = mongo_query[3:]
+        if mongo_query.endswith("```"):
+            mongo_query = mongo_query[:-3]
+        
+        return MongoResponse(mongo_query=mongo_query.strip())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

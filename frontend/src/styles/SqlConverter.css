@@ -67,6 +67,7 @@
   display: flex;
   gap: 1rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
 .convert-btn {
@@ -74,22 +75,48 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: var(--primary-color);
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+  min-width: 180px;
 }
 
-.convert-btn:hover:not(:disabled) {
+.convert-btn.primary {
+  background: var(--primary-color);
+}
+
+.convert-btn.secondary {
+  background: #00a5b8;
+}
+
+.convert-btn.tertiary {
+  background: #4caf50;
+}
+
+.convert-btn.primary:hover:not(:disabled) {
   background: #0052cc;
+  transform: translateY(-2px);
+}
+
+.convert-btn.secondary:hover:not(:disabled) {
+  background: #00869a;
+  transform: translateY(-2px);
+}
+
+.convert-btn.tertiary:hover:not(:disabled) {
+  background: #388e3c;
+  transform: translateY(-2px);
 }
 
 .convert-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none !important;
 }
 
 .clear-btn {
@@ -126,7 +153,40 @@
   background: #0052cc;
 }
 
-.sql-output {
+.query-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #555;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: #f0f7ff;
+  color: var(--primary-color);
+}
+
+.tab-btn.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.query-output {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
@@ -134,14 +194,22 @@
   overflow-x: auto;
 }
 
-.sql-output pre {
+.sql-output, .tsql-output, .mongo-output {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.query-output pre {
   margin: 0;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 0.9rem;
   line-height: 1.4;
 }
 
-.sql-output code {
+.query-output code {
   color: #2d3748;
   background: none;
 }
@@ -194,6 +262,27 @@
   to { transform: rotate(360deg); }
 }
 
+/* Specific styles for the query output to ensure visibility */
+.query-output {
+  background-color: #f8f9fa !important;
+  color: #000000 !important;
+}
+
+.query-output pre,
+.query-output code {
+  color: #000000 !important;
+  background-color: #f8f9fa !important;
+}
+
+.tsql-output {
+  background-color: #f8f9fa !important;
+}
+
+.tsql-output pre,
+.tsql-output code {
+  color: #000000 !important;
+}
+
 @media (max-width: 768px) {
   .converter-container {
     padding: 1rem;
@@ -201,6 +290,12 @@
   
   .input-actions {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .convert-btn {
+    width: 100%;
+    min-width: unset;
   }
   
   .examples-grid {
@@ -215,5 +310,15 @@
   .copy-btn {
     margin-left: 0;
     margin-top: 0.5rem;
+  }
+  
+  .query-tabs {
+    overflow-x: auto;
+    padding-bottom: 0.75rem;
+    flex-wrap: nowrap;
+  }
+  
+  .tab-btn {
+    white-space: nowrap;
   }
 }
