@@ -4,13 +4,14 @@ import {
   ArrowLeft, Brain, Clock, CheckCircle, XCircle, Award, 
   BarChart3, Code, Database, TrendingUp, FileText, Play,
   RotateCw, Trophy, Star, Target, ChevronRight, ChevronLeft,
-  RotateCcw, Share2
+  RotateCcw, Share2, Plus, Bookmark
 } from "lucide-react";
 import "../App.css";
 import "../styles/SkillAssessment.css";
+import CreateQuiz from "./CreateQuiz";
 
 export default function SkillAssessment({ onBackToTools }) {
-  const [currentView, setCurrentView] = useState('categories'); // 'categories', 'quiz', 'results'
+  const [currentView, setCurrentView] = useState('categories'); // 'categories', 'quiz', 'results', 'create-quiz'
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -19,6 +20,7 @@ export default function SkillAssessment({ onBackToTools }) {
   const [quizStarted, setQuizStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
+  const [customQuizzes, setCustomQuizzes] = useState([]);
 
   const skillCategories = [
     {
@@ -84,6 +86,12 @@ export default function SkillAssessment({ onBackToTools }) {
   ];
 
   // Timer effect
+  // Load custom quizzes on component mount
+  useEffect(() => {
+    loadCustomQuizzes();
+  }, []);
+
+  // Timer effect
   useEffect(() => {
     let interval = null;
     if (quizStarted && timeLeft > 0) {
@@ -96,6 +104,72 @@ export default function SkillAssessment({ onBackToTools }) {
     return () => clearInterval(interval);
   }, [quizStarted, timeLeft]);
 
+  const loadCustomQuizzes = async () => {
+    try {
+      // In a real application, fetch from backend
+      // For now, we'll get from localStorage as a fallback
+      const savedQuizzes = localStorage.getItem('customQuizzes');
+      if (savedQuizzes) {
+        setCustomQuizzes(JSON.parse(savedQuizzes));
+      }
+
+      // If backend endpoint is available, use it
+      try {
+        const { data } = await axios.get("http://localhost:8000/custom-quiz/list");
+        setCustomQuizzes(data);
+      } catch (err) {
+        // Backend endpoint not available, continue with localStorage data
+        console.log("Using localStorage for custom quizzes");
+      }
+    } catch (err) {
+      console.error("Error loading custom quizzes:", err);
+    }
+  };
+  
+  const handleQuizCreated = (newQuiz) => {
+    // Add ID to the new quiz
+    const quizWithId = {
+      ...newQuiz,
+      id: `custom-${Date.now()}`,
+      isCustom: true
+    };
+    
+    // Update state
+    const updatedQuizzes = [...customQuizzes, quizWithId];
+    setCustomQuizzes(updatedQuizzes);
+    
+    // Save to localStorage as fallback
+    localStorage.setItem('customQuizzes', JSON.stringify(updatedQuizzes));
+    
+    // Return to categories view
+    setCurrentView('categories');
+  };
+
+  const deleteQuiz = async (quizId, e) => {
+    // Stop the click event from bubbling up to the card
+    e.stopPropagation();
+    
+    try {
+      // Filter out the quiz with the matching ID
+      const updatedQuizzes = customQuizzes.filter(quiz => quiz.id !== quizId);
+      
+      // Update state
+      setCustomQuizzes(updatedQuizzes);
+      
+      // Update localStorage
+      localStorage.setItem('customQuizzes', JSON.stringify(updatedQuizzes));
+      
+      // If backend endpoint is available, delete from there too
+      try {
+        await axios.delete(`http://localhost:8000/custom-quiz/delete/${quizId}`);
+      } catch (err) {
+        console.log("Using only localStorage for deleting quiz");
+      }
+    } catch (err) {
+      console.error("Error deleting quiz:", err);
+    }
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -104,20 +178,48 @@ export default function SkillAssessment({ onBackToTools }) {
 
   const startQuiz = async (category) => {
     setLoading(true);
+    
     try {
-      const { data } = await axios.post("http://localhost:8000/skill-assessment/generate", {
-        category: category.id,
-        difficulty: category.difficulty.toLowerCase(),
-        num_questions: category.questions
-      });
-      
-      setCurrentQuiz(data);
-      setSelectedCategory(category);
-      setCurrentQuestionIndex(0);
-      setUserAnswers([]);
-      setTimeLeft(category.duration.split(' ')[0] * 60); // Convert minutes to seconds
-      setQuizStarted(true);
-      setCurrentView('quiz');
+      // Check if this is a custom quiz or a predefined category
+      if (category.isCustom) {
+        // For custom quizzes, we already have the questions
+        const customQuizData = {
+          questions: category.questions,
+          category: category.title,
+          difficulty: category.difficulty,
+          duration_minutes: category.duration
+        };
+        
+        setCurrentQuiz(customQuizData);
+        setSelectedCategory({
+          ...category,
+          title: category.title,
+          id: category.id,
+          difficulty: category.difficulty,
+          duration: `${category.duration} mins`,
+          questions: category.questions.length
+        });
+        setCurrentQuestionIndex(0);
+        setUserAnswers([]);
+        setTimeLeft(category.duration * 60); // Convert minutes to seconds
+        setQuizStarted(true);
+        setCurrentView('quiz');
+      } else {
+        // For predefined categories, call the API
+        const { data } = await axios.post("http://localhost:8000/skill-assessment/generate", {
+          category: category.id,
+          difficulty: category.difficulty.toLowerCase(),
+          num_questions: category.questions
+        });
+        
+        setCurrentQuiz(data);
+        setSelectedCategory(category);
+        setCurrentQuestionIndex(0);
+        setUserAnswers([]);
+        setTimeLeft(category.duration.split(' ')[0] * 60); // Convert minutes to seconds
+        setQuizStarted(true);
+        setCurrentView('quiz');
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to generate quiz. Please try again.');
@@ -151,15 +253,72 @@ export default function SkillAssessment({ onBackToTools }) {
     setLoading(true);
     
     try {
-      const { data } = await axios.post("http://localhost:8000/skill-assessment/evaluate", {
-        category: selectedCategory.id,
-        difficulty: selectedCategory.difficulty.toLowerCase(),
-        answers: userAnswers,
-        questions: currentQuiz.questions
-      });
-      
-      setResults(data);
-      setCurrentView('results');
+      // For custom quizzes, we need to handle evaluation locally since the API might not support them
+      if (selectedCategory.isCustom) {
+        // Calculate score
+        const correctCount = userAnswers.reduce((count, answer, index) => {
+          if (index < currentQuiz.questions.length && answer === currentQuiz.questions[index].correct_answer) {
+            return count + 1;
+          }
+          return count;
+        }, 0);
+        
+        const totalQuestions = currentQuiz.questions.length;
+        const score = Math.round((correctCount / totalQuestions) * 100);
+        
+        // Determine performance level
+        let performanceLevel = "beginner";
+        if (score >= 90) performanceLevel = "expert";
+        else if (score >= 75) performanceLevel = "advanced";
+        else if (score >= 60) performanceLevel = "intermediate";
+        
+        // Create custom evaluation result
+        const evaluationResult = {
+          score,
+          correct_count: correctCount,
+          total_questions: totalQuestions,
+          performance_level: performanceLevel,
+          strengths: ["Knowledge in selected topics", "Quiz completion"],
+          weaknesses: ["Areas with incorrect answers", "Topics needing more review"],
+          recommendations: [
+            "Review questions you got wrong",
+            "Create more quizzes on challenging topics",
+            "Try standard assessments for comparison"
+          ],
+          detailed_feedback: `You completed the custom quiz "${selectedCategory.title}" with a score of ${score}%. Keep practicing to improve your knowledge in this area.`
+        };
+        
+        // Remove the completed quiz since it should expire after being taken
+        if (selectedCategory.id) {
+          // Filter out the completed quiz from customQuizzes state
+          const updatedQuizzes = customQuizzes.filter(quiz => quiz.id !== selectedCategory.id);
+          setCustomQuizzes(updatedQuizzes);
+          
+          // Update localStorage
+          localStorage.setItem('customQuizzes', JSON.stringify(updatedQuizzes));
+          
+          // Try to remove from backend if API is available
+          try {
+            await axios.delete(`http://localhost:8000/custom-quiz/delete/${selectedCategory.id}`);
+          } catch (err) {
+            console.log("Using only localStorage for removing completed quiz");
+          }
+        }
+        
+        setResults(evaluationResult);
+        setCurrentView('results');
+      } else {
+        // For standard categories, use the API
+        const { data } = await axios.post("http://localhost:8000/skill-assessment/evaluate", {
+          category: selectedCategory.id,
+          difficulty: selectedCategory.difficulty.toLowerCase(),
+          answers: userAnswers,
+          questions: currentQuiz.questions
+        });
+        
+        setResults(data);
+        setCurrentView('results');
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to evaluate quiz. Please try again.');
@@ -273,6 +432,16 @@ export default function SkillAssessment({ onBackToTools }) {
     return cleaned;
   };
 
+  // Create Quiz View
+  if (currentView === 'create-quiz') {
+    return (
+      <CreateQuiz 
+        onBack={() => setCurrentView('categories')} 
+        onQuizCreated={handleQuizCreated}
+      />
+    );
+  }
+  
   // Categories View
   if (currentView === 'categories') {
     return (
@@ -286,6 +455,14 @@ export default function SkillAssessment({ onBackToTools }) {
             <ArrowLeft size={20} />
           </button>
           <span>Skill Assessment Center</span>
+          <button 
+            className="create-quiz-btn" 
+            onClick={() => setCurrentView('create-quiz')}
+            title="Create Your Own Quiz"
+          >
+            <Plus size={16} />
+            Create Quiz
+          </button>
         </header>
 
         <div className="assessment-container">
@@ -300,6 +477,7 @@ export default function SkillAssessment({ onBackToTools }) {
             </div>
           </div>
 
+          <h2 className="section-title">Standard Assessments</h2>
           <div className="categories-grid">
             {skillCategories.map((category) => (
               <div 
@@ -352,6 +530,94 @@ export default function SkillAssessment({ onBackToTools }) {
               </div>
             ))}
           </div>
+          
+          {customQuizzes.length > 0 && (
+            <>
+              <h2 className="section-title">Your Custom Quizzes</h2>
+              <div className="quiz-info-banner">
+                <Clock size={16} />
+                <span>Note: Custom quizzes will automatically expire after completion</span>
+              </div>
+              <div className="categories-grid">
+                {customQuizzes.map(quiz => (
+                  <div key={quiz.id} className="category-card custom-quiz-card">
+                    <div className="category-header">
+                      <div className="category-icon-wrapper" style={{ background: '#3498db' }}>
+                        <Bookmark className="category-icon" />
+                      </div>
+                      <div className="category-info">
+                        <h3>{quiz.title}</h3>
+                        <div className="category-meta">
+                          <span 
+                            className="difficulty-badge" 
+                            style={{ background: getDifficultyColor(quiz.difficulty) }}
+                          >
+                            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+                          </span>
+                          <span className="duration-info">
+                            <Clock size={14} />
+                            {quiz.duration} mins
+                          </span>
+                          <span className="questions-info">
+                            <FileText size={14} />
+                            {quiz.questions.length} Questions
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        className="delete-quiz-btn"
+                        onClick={(e) => deleteQuiz(quiz.id, e)}
+                        aria-label="Delete quiz"
+                        title="Delete quiz"
+                      >
+                        <XCircle size={18} />
+                      </button>
+                    </div>
+                    <p className="category-description">{quiz.description || "Custom quiz created by you."}</p>
+                    <button 
+                      className="start-quiz-btn custom-quiz-btn" 
+                      onClick={() => startQuiz(quiz)}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <RotateCw className="spinning" size={16} />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <Play size={16} />
+                          Start Quiz
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+                
+                <div className="category-card add-quiz-card" onClick={() => setCurrentView('create-quiz')}>
+                  <div className="add-quiz-content">
+                    <Plus size={48} />
+                    <h3>Create New Quiz</h3>
+                    <p>Create your own custom quiz with personalized questions and answers</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          
+          {customQuizzes.length === 0 && (
+            <div className="create-first-quiz">
+              <h2>Create Your Own Quiz</h2>
+              <p>Want to make a custom quiz? It's easy to create your own questions and share with others.</p>
+              <button 
+                className="create-quiz-button" 
+                onClick={() => setCurrentView('create-quiz')}
+              >
+                <Plus size={18} />
+                Create My First Quiz
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -393,7 +659,7 @@ export default function SkillAssessment({ onBackToTools }) {
             </div>
             
             <div className="question-content">
-              <p className="question-text">{formatQuestionText(currentQuestion.question)}</p>
+              <p className="preview_question-text">{formatQuestionText(currentQuestion.question)}</p>
               
               {currentQuestion.code_snippet && (
                 <div className="code-snippet">

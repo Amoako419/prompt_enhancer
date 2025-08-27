@@ -341,6 +341,11 @@ export const StatisticalAnalysis = ({ data }) => {
 export const CorrelationAnalysis = ({ data }) => {
   console.log("CorrelationAnalysis received data:", data);
   
+  // Check if data is undefined or null
+  if (!data) {
+    return <div className="no-data">No correlation data available</div>;
+  }
+  
   // Handle new API format with title and content
   if (data && data.variables && data.correlations) {
     // Make sure we have both variables and correlations arrays
@@ -351,6 +356,10 @@ export const CorrelationAnalysis = ({ data }) => {
 
     // Helper function to get color based on correlation value
     const getCorrelationColor = (value) => {
+      if (value === undefined || value === null) {
+        return 'rgba(200, 200, 200, 0.3)'; // Light gray for missing values
+      }
+      
       if (value === 1) return 'rgba(255, 255, 255, 0.9)';
       
       const absValue = Math.abs(value);
@@ -399,9 +408,9 @@ export const CorrelationAnalysis = ({ data }) => {
                           color: Math.abs(value) > 0.7 ? '#ffffff' : 'inherit'
                         }}
                         className="corr-value"
-                        title={`${data.variables[rowIdx]} vs ${data.variables[colIdx]}: ${value.toFixed(3)}`}
+                        title={`${data.variables[rowIdx]} vs ${data.variables[colIdx]}: ${value !== undefined && value !== null ? value.toFixed(3) : 'N/A'}`}
                       >
-                        {value.toFixed(2)}
+                        {value !== undefined && value !== null ? value.toFixed(2) : 'N/A'}
                       </td>
                     ))}
                   </tr>
@@ -418,7 +427,7 @@ export const CorrelationAnalysis = ({ data }) => {
               {data.strong_correlations.map((corr, idx) => (
                 <div key={idx} className="correlation-item">
                   <span className="correlation-pair">{corr.variables.join(' ↔ ')}</span>
-                  <span className="correlation-value">{corr.value.toFixed(3)}</span>
+                  <span className="correlation-value">{corr.value !== undefined && corr.value !== null ? corr.value.toFixed(3) : 'N/A'}</span>
                 </div>
               ))}
             </div>
