@@ -3,6 +3,7 @@ fastapi==0.116.0
 uvicorn[standard]==0.35.0
 pydantic[email]==2.11
 greenlet==3.2.4
+httpx==1.2.3
 
 # Google Gemini SDK
 google-generativeai==0.8.2
