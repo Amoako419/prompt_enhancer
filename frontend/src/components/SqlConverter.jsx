@@ -1,37 +1,99 @@
 import { useState } from "react";
 import axios from "axios";
-import { Database, ArrowLeft, Copy, RotateCw, Wand2 } from "lucide-react";
+import { Database, ArrowLeft, Copy, RotateCw, Wand2, File, Server } from "lucide-react";
 import "../App.css";
 import "../styles/SqlConverter.css";
 
 export default function SqlConverter({ onBackToTools }) {
   const [englishQuery, setEnglishQuery] = useState("");
   const [sqlResult, setSqlResult] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [tsqlResult, setTsqlResult] = useState("");
+  const [mongoResult, setMongoResult] = useState("");
+  const [activeTab, setActiveTab] = useState("sql"); // "sql", "tsql", "mongo"
+  const [loading, setLoading] = useState({
+    sql: false,
+    tsql: false,
+    mongo: false
+  });
   const [copied, setCopied] = useState(false);
 
   const convertToSql = async () => {
     if (!englishQuery.trim()) return;
     
-    setLoading(true);
+    setLoading(prev => ({ ...prev, sql: true }));
     try {
       const { data } = await axios.post("http://localhost:8000/to-sql", {
         english_query: englishQuery,
       });
       setSqlResult(data.sql_query);
+      setActiveTab("sql");
     } catch (err) {
       console.error(err);
       setSqlResult("Error converting to SQL. Please try again.");
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, sql: false }));
+    }
+  };
+
+  const convertToTsql = async () => {
+    if (!englishQuery.trim()) return;
+    
+    setLoading(prev => ({ ...prev, tsql: true }));
+    try {
+      // You'll need to implement this endpoint in the backend
+      const { data } = await axios.post("http://localhost:8000/to-tsql", {
+        english_query: englishQuery,
+      });
+      setTsqlResult(data?.tsql_query || "T-SQL conversion is not yet implemented on the backend.");
+      setActiveTab("tsql");
+    } catch (err) {
+      console.error(err);
+      setTsqlResult("Error converting to T-SQL. Backend endpoint may not be implemented yet.");
+    } finally {
+      setLoading(prev => ({ ...prev, tsql: false }));
+    }
+  };
+
+  const convertToMongo = async () => {
+    if (!englishQuery.trim()) return;
+    
+    setLoading(prev => ({ ...prev, mongo: true }));
+    try {
+      // You'll need to implement this endpoint in the backend
+      const { data } = await axios.post("http://localhost:8000/to-mongo", {
+        english_query: englishQuery,
+      });
+      setMongoResult(data?.mongo_query || "MongoDB conversion is not yet implemented on the backend.");
+      setActiveTab("mongo");
+    } catch (err) {
+      console.error(err);
+      setMongoResult("Error converting to MongoDB. Backend endpoint may not be implemented yet.");
+    } finally {
+      setLoading(prev => ({ ...prev, mongo: false }));
     }
   };
 
   const copyToClipboard = async () => {
-    if (!sqlResult) return;
+    let contentToCopy;
+    
+    switch(activeTab) {
+      case "sql":
+        contentToCopy = sqlResult;
+        break;
+      case "tsql":
+        contentToCopy = tsqlResult;
+        break;
+      case "mongo":
+        contentToCopy = mongoResult;
+        break;
+      default:
+        contentToCopy = sqlResult;
+    }
+    
+    if (!contentToCopy) return;
     
     try {
-      await navigator.clipboard.writeText(sqlResult);
+      await navigator.clipboard.writeText(contentToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -42,7 +104,10 @@ export default function SqlConverter({ onBackToTools }) {
   const clearAll = () => {
     setEnglishQuery("");
     setSqlResult("");
+    setTsqlResult("");
+    setMongoResult("");
     setCopied(false);
+    setActiveTab("sql");
   };
 
   return (
@@ -77,12 +142,12 @@ export default function SqlConverter({ onBackToTools }) {
               <button 
                 className="convert-btn primary"
                 onClick={convertToSql}
-                disabled={loading || !englishQuery.trim()}
+                disabled={loading.sql || !englishQuery.trim()}
               >
-                {loading ? (
+                {loading.sql ? (
                   <>
                     <RotateCw size={16} className="spinning" />
-                    Converting...
+                    Converting to SQL...
                   </>
                 ) : (
                   <>
@@ -92,9 +157,43 @@ export default function SqlConverter({ onBackToTools }) {
                 )}
               </button>
               <button 
+                className="convert-btn secondary"
+                onClick={convertToTsql}
+                disabled={loading.tsql || !englishQuery.trim()}
+              >
+                {loading.tsql ? (
+                  <>
+                    <RotateCw size={16} className="spinning" />
+                    Converting to T-SQL...
+                  </>
+                ) : (
+                  <>
+                    <File size={16} />
+                    Convert to T-SQL
+                  </>
+                )}
+              </button>
+              <button 
+                className="convert-btn tertiary"
+                onClick={convertToMongo}
+                disabled={loading.mongo || !englishQuery.trim()}
+              >
+                {loading.mongo ? (
+                  <>
+                    <RotateCw size={16} className="spinning" />
+                    Converting to MongoDB...
+                  </>
+                ) : (
+                  <>
+                    <Server size={16} />
+                    Convert to MongoDB
+                  </>
+                )}
+              </button>
+              <button 
                 className="clear-btn"
                 onClick={clearAll}
-                disabled={loading}
+                disabled={loading.sql || loading.tsql || loading.mongo}
               >
                 Clear All
               </button>
@@ -102,11 +201,45 @@ export default function SqlConverter({ onBackToTools }) {
           </div>
 
           {/* Output Section */}
-          {sqlResult && (
+          {(sqlResult || tsqlResult || mongoResult) && (
             <div className="output-section">
+              <div className="query-tabs">
+                {sqlResult && (
+                  <button 
+                    className={`tab-btn ${activeTab === 'sql' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('sql')}
+                  >
+                    <Database size={16} />
+                    SQL Query
+                  </button>
+                )}
+                {tsqlResult && (
+                  <button 
+                    className={`tab-btn ${activeTab === 'tsql' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('tsql')}
+                  >
+                    <File size={16} />
+                    T-SQL Query
+                  </button>
+                )}
+                {mongoResult && (
+                  <button 
+                    className={`tab-btn ${activeTab === 'mongo' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('mongo')}
+                  >
+                    <Server size={16} />
+                    MongoDB Query
+                  </button>
+                )}
+              </div>
+              
               <div className="section-header">
                 <Database className="section-icon" size={20} />
-                <h3>Generated SQL Query</h3>
+                <h3>
+                  {activeTab === 'sql' ? 'Generated SQL Query' : 
+                   activeTab === 'tsql' ? 'Generated T-SQL Query' : 
+                   'Generated MongoDB Query'}
+                </h3>
                 <button 
                   className="copy-btn"
                   onClick={copyToClipboard}
@@ -116,8 +249,13 @@ export default function SqlConverter({ onBackToTools }) {
                   {copied ? "Copied!" : "Copy"}
                 </button>
               </div>
-              <div className="sql-output">
-                <pre><code>{sqlResult}</code></pre>
+              
+              <div className={`query-output ${activeTab}-output`} style={{ backgroundColor: "#f8f9fa" }}>
+                <pre style={{ color: "#000000" }}><code style={{ color: "#000000" }}>
+                  {activeTab === 'sql' ? sqlResult : 
+                   activeTab === 'tsql' ? tsqlResult : 
+                   mongoResult}
+                </code></pre>
               </div>
             </div>
           )}
