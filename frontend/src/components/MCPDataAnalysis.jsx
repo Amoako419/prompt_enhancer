@@ -15,10 +15,14 @@ import {
   CheckCircle,
   Settings,
   Info,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ArrowRightLeft,
+  ToggleRight,
+  SwitchCamera
 } from "lucide-react";
 import "../styles/MCPDataAnalysis.css";
 import "../styles/MCPAnalysisTypes.css";
+import "../styles/MCPDataAnalysisCompare.css";
 import { 
   DataPreview, 
   StatisticalAnalysis, 
@@ -28,15 +32,40 @@ import {
   Visualizations, 
   TextAnalysis 
 } from "./MCPAnalysisTypes";
+import DatasetComparison from "./DatasetComparison";
 
 export default function MCPDataAnalysis({ onBackToTools }) {
+  // Single dataset state (original)
   const [selectedFile, setSelectedFile] = useState(null);
+  
+  // Dual dataset state (new)
+  const [datasets, setDatasets] = useState({
+    primary: {
+      file: null,
+      name: "Dataset A",
+      preview: null,
+      metadata: null
+    },
+    secondary: {
+      file: null,
+      name: "Dataset B", 
+      preview: null,
+      metadata: null
+    }
+  });
+  const [comparisonMode, setComparisonMode] = useState(false);
+  const [comparisonResults, setComparisonResults] = useState(null);
+  
   const [analysis, setAnalysis] = useState("");
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mcpStatus, setMcpStatus] = useState("disconnected");
+  
+  // Refs for file inputs
   const fileInputRef = useRef(null);
+  const primaryFileInputRef = useRef(null);
+  const secondaryFileInputRef = useRef(null);
 
   // Check MCP status on component mount
   useEffect(() => {
@@ -49,37 +78,51 @@ export default function MCPDataAnalysis({ onBackToTools }) {
       id: "load_data",
       label: "Load & Preview Data",
       icon: <Database size={16} />,
-      description: "Load and display basic information about your dataset"
+      description: "Load and display basic information about your dataset",
+      supportsComparison: true
     },
     {
       id: "descriptive_stats",
       label: "Descriptive Statistics",
       icon: <BarChart3 size={16} />,
-      description: "Generate comprehensive statistical summary of your data"
+      description: "Generate comprehensive statistical summary of your data",
+      supportsComparison: true
     },
     {
       id: "correlation_analysis",
       label: "Correlation Analysis",
       icon: <TrendingUp size={16} />,
-      description: "Analyze relationships between variables in your dataset"
+      description: "Analyze relationships between variables in your dataset",
+      supportsComparison: true
     },
     {
       id: "visualization",
       label: "Data Visualization",
       icon: <PieChart size={16} />,
-      description: "Create various plots and charts for data exploration"
+      description: "Create various plots and charts for data exploration",
+      supportsComparison: true
     },
     {
       id: "hypothesis_testing",
       label: "Hypothesis Testing",
       icon: <AlertCircle size={16} />,
-      description: "Perform statistical tests (t-test, ANOVA, chi-square)"
+      description: "Perform statistical tests (t-test, ANOVA, chi-square)",
+      supportsComparison: false
     },
     {
       id: "machine_learning",
       label: "Machine Learning",
       icon: <Settings size={16} />,
-      description: "Apply ML algorithms for classification, regression, or clustering"
+      description: "Apply ML algorithms for classification, regression, or clustering",
+      supportsComparison: false
+    },
+    {
+      id: "dataset_comparison",
+      label: "Dataset Comparison",
+      icon: <ArrowRightLeft size={16} />,
+      description: "Compare structure and content of two datasets",
+      supportsComparison: true,
+      requiresComparison: true
     }
   ];
 
@@ -98,7 +141,42 @@ export default function MCPDataAnalysis({ onBackToTools }) {
     }
   };
 
-  // Handle file upload
+  // Toggle comparison mode
+  const toggleComparisonMode = () => {
+    if (comparisonMode) {
+      // Switching back to single dataset mode
+      setComparisonMode(false);
+      // If primary dataset exists, make it the selected file
+      if (datasets.primary.file) {
+        setSelectedFile(datasets.primary.file);
+      }
+      // Clear analysis if it requires comparison
+      const currentAnalysis = analysisTypes.find(a => a.id === analysis);
+      if (currentAnalysis?.requiresComparison) {
+        setAnalysis("");
+      }
+    } else {
+      // Switching to comparison mode
+      setComparisonMode(true);
+      // If a file was already selected, make it the primary dataset
+      if (selectedFile) {
+        setDatasets(prev => ({
+          ...prev,
+          primary: {
+            ...prev.primary,
+            file: selectedFile,
+            name: selectedFile.name || "Dataset A"
+          }
+        }));
+      }
+    }
+    
+    // Reset results when toggling modes
+    setResults(null);
+    setComparisonResults(null);
+  };
+  
+  // Handle file upload for single dataset mode
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -108,18 +186,59 @@ export default function MCPDataAnalysis({ onBackToTools }) {
       if (allowedTypes.includes(fileExtension)) {
         setSelectedFile(file);
         setError("");
+        setResults(null); // Clear previous results
       } else {
         setError("Please select a CSV, Excel, or JSON file.");
         setSelectedFile(null);
       }
     }
   };
+  
+  // Handle file upload for comparison mode
+  const handleDatasetFileUpload = (event, datasetType) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const allowedTypes = ['.csv', '.xlsx', '.json'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    if (allowedTypes.includes(fileExtension)) {
+      setDatasets(prev => ({
+        ...prev,
+        [datasetType]: {
+          ...prev[datasetType],
+          file: file,
+          name: file.name || (datasetType === 'primary' ? 'Dataset A' : 'Dataset B')
+        }
+      }));
+      setError("");
+      setComparisonResults(null); // Clear previous comparison results
+    } else {
+      setError(`Please select a CSV, Excel, or JSON file for ${datasetType === 'primary' ? 'Dataset A' : 'Dataset B'}.`);
+    }
+  };
 
   // Execute analysis via MCP server using specific endpoints
   const executeAnalysis = async () => {
-    if (!selectedFile) {
-      setError("Please upload a file first.");
-      return;
+    // Check for comparison mode requirements
+    if (comparisonMode) {
+      // In comparison mode, we need both datasets for most analyses
+      if (!datasets.primary.file) {
+        setError("Please upload the primary dataset (Dataset A).");
+        return;
+      }
+      
+      // For dataset comparison analysis, we need both datasets
+      if (analysis === "dataset_comparison" && !datasets.secondary.file) {
+        setError("Please upload both datasets to perform comparison.");
+        return;
+      }
+    } else {
+      // In single dataset mode
+      if (!selectedFile) {
+        setError("Please upload a file first.");
+        return;
+      }
     }
 
     if (!analysis) {
@@ -129,12 +248,15 @@ export default function MCPDataAnalysis({ onBackToTools }) {
 
     setLoading(true);
     setError("");
-    setResults(null);
+    
+    // Reset appropriate results based on mode
+    if (comparisonMode) {
+      setComparisonResults(null);
+    } else {
+      setResults(null);
+    }
     
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
       // Use the specific endpoint for each analysis type
       const endpointMap = {
         'load_data': '/mcp/load-data',
@@ -142,7 +264,8 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         'correlation_analysis': '/mcp/correlation-analysis',
         'visualization': '/mcp/visualization',
         'hypothesis_testing': '/mcp/hypothesis-testing',
-        'machine_learning': '/mcp/machine-learning'
+        'machine_learning': '/mcp/machine-learning',
+        'dataset_comparison': '/mcp/compare-datasets' // New endpoint for dataset comparison
       };
 
       const endpoint = endpointMap[analysis];
@@ -151,24 +274,68 @@ export default function MCPDataAnalysis({ onBackToTools }) {
       }
 
       console.log(`Calling endpoint: http://localhost:8000${endpoint}`);
-
-      const response = await axios.post(`http://localhost:8000${endpoint}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      
+      let response;
+      
+      if (comparisonMode && datasets.primary.file && 
+          (analysis === 'dataset_comparison' || analysisTypes.find(a => a.id === analysis)?.supportsComparison)) {
+        // For comparison analysis, always use the compare-datasets endpoint
+        const formData = new FormData();
+        formData.append('fileA', datasets.primary.file);
+        
+        // Only append fileB if it exists
+        if (datasets.secondary.file) {
+          formData.append('fileB', datasets.secondary.file);
+        } else {
+          // If comparison requires secondary file but it's not present
+          if (analysis === 'dataset_comparison') {
+            throw new Error("Secondary dataset (Dataset B) is required for comparison");
+          }
         }
-      });
+        
+        // Add analysis type parameter
+        formData.append('analysis_type', analysis);
+        
+        console.log("Executing comparison analysis between datasets");
+        console.log(`Primary file: ${datasets.primary.file.name}`);
+        console.log(`Secondary file: ${datasets.secondary.file ? datasets.secondary.file.name : 'Not provided'}`);
+        
+        // Always use the compare-datasets endpoint for comparison mode
+        response = await axios.post(`http://localhost:8000/mcp/compare-datasets`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        if (!response.data) {
+          throw new Error("No data received from API");
+        }
+        
+        setComparisonResults(response.data);
+      } else {
+        // For single dataset analysis
+        const formData = new FormData();
+        formData.append('file', comparisonMode ? datasets.primary.file : selectedFile);
+        
+        response = await axios.post(`http://localhost:8000${endpoint}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
 
-      console.log("Backend Response:", response.data);
-      
-      if (!response.data) {
-        throw new Error("No data received from API");
+        console.log("Backend Response:", response.data);
+        
+        if (!response.data) {
+          throw new Error("No data received from API");
+        }
+        
+        setResults(response.data);
       }
-      
-      setResults(response.data);
     } catch (error) {
       console.error("Analysis error:", error);
       setError(error.response?.data?.detail || "Failed to execute analysis. Make sure the backend server is running.");
       setResults(null);
+      setComparisonResults(null);
     } finally {
       setLoading(false);
     }
@@ -653,28 +820,108 @@ export default function MCPDataAnalysis({ onBackToTools }) {
         </div>
       )}
 
+      {/* Mode Switch */}
+      <div className="mcp-mode-switch">
+        <button 
+          className={`mcp-mode-button ${!comparisonMode ? 'active' : ''}`}
+          onClick={() => !comparisonMode ? null : toggleComparisonMode()}
+        >
+          <FileSpreadsheet size={16} />
+          <span>Single Dataset</span>
+        </button>
+        <button 
+          className={`mcp-mode-button ${comparisonMode ? 'active' : ''}`}
+          onClick={() => comparisonMode ? null : toggleComparisonMode()}
+        >
+          <ArrowRightLeft size={16} />
+          <span>Comparison Mode</span>
+        </button>
+      </div>
+
       {/* Analysis selection */}
       <div className="mcp-analysis-container">
         <div className="mcp-sidebar">
+          {/* Upload section - Single dataset or comparison mode */}
           <div className="mcp-upload-section">
-            <h3>Upload Data</h3>
-            <div className="mcp-upload-zone" onClick={() => fileInputRef.current.click()}>
-              <Upload size={24} />
-              <p>{selectedFile ? selectedFile.name : "Click to upload file"}</p>
-              <span className="mcp-upload-hint">CSV, Excel or JSON</span>
-              <input 
-                type="file" 
-                ref={fileInputRef}
-                onChange={handleFileUpload} 
-                style={{ display: 'none' }} 
-                accept=".csv,.xlsx,.xls,.json"
-              />
-            </div>
-            {selectedFile && (
-              <div className="mcp-file-info">
-                <FileText size={14} />
-                <span>{selectedFile.name}</span>
-                <span className="mcp-file-size">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+            <h3>{comparisonMode ? "Upload Datasets" : "Upload Data"}</h3>
+            
+            {!comparisonMode ? (
+              /* Single Dataset Mode */
+              <>
+                <div className="mcp-upload-zone" onClick={() => fileInputRef.current.click()}>
+                  <Upload size={24} />
+                  <p>{selectedFile ? selectedFile.name : "Click to upload file"}</p>
+                  <span className="mcp-upload-hint">CSV, Excel or JSON</span>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleFileUpload} 
+                    style={{ display: 'none' }} 
+                    accept=".csv,.xlsx,.xls,.json"
+                  />
+                </div>
+                {selectedFile && (
+                  <div className="mcp-file-info">
+                    <FileText size={14} />
+                    <span>{selectedFile.name}</span>
+                    <span className="mcp-file-size">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Comparison Mode - Dual Datasets */
+              <div className="mcp-comparison-datasets">
+                <div className="mcp-dataset-upload primary">
+                  <h4>Dataset A</h4>
+                  <div 
+                    className="mcp-upload-zone comparison" 
+                    onClick={() => primaryFileInputRef.current.click()}
+                  >
+                    <Upload size={20} />
+                    <p>{datasets.primary.file ? datasets.primary.file.name : "Click to upload primary dataset"}</p>
+                    <span className="mcp-upload-hint">CSV, Excel or JSON</span>
+                    <input 
+                      type="file" 
+                      ref={primaryFileInputRef}
+                      onChange={(e) => handleDatasetFileUpload(e, 'primary')} 
+                      style={{ display: 'none' }} 
+                      accept=".csv,.xlsx,.xls,.json"
+                    />
+                  </div>
+                  {datasets.primary.file && (
+                    <div className="mcp-file-info">
+                      <FileText size={14} />
+                      <span>{datasets.primary.file.name}</span>
+                      <span className="mcp-file-size">{(datasets.primary.file.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mcp-dataset-upload secondary">
+                  <h4>Dataset B</h4>
+                  <div 
+                    className="mcp-upload-zone comparison" 
+                    onClick={() => secondaryFileInputRef.current.click()}
+                  >
+                    <Upload size={20} />
+                    <p>{datasets.secondary.file ? datasets.secondary.file.name : "Click to upload secondary dataset"}</p>
+                    <span className="mcp-upload-hint">CSV, Excel or JSON</span>
+                    <input 
+                      type="file" 
+                      ref={secondaryFileInputRef}
+                      onChange={(e) => handleDatasetFileUpload(e, 'secondary')} 
+                      style={{ display: 'none' }} 
+                      accept=".csv,.xlsx,.xls,.json"
+                    />
+                  </div>
+                  {datasets.secondary.file && (
+                    <div className="mcp-file-info">
+                      <FileText size={14} />
+                      <span>{datasets.secondary.file.name}</span>
+                      <span className="mcp-file-size">{(datasets.secondary.file.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -682,29 +929,49 @@ export default function MCPDataAnalysis({ onBackToTools }) {
           <div className="mcp-analysis-selection">
             <h3>Select Analysis</h3>
             <div className="mcp-analysis-options">
-              {analysisTypes.map((type) => (
-                <button 
-                  key={type.id} 
-                  className={`mcp-analysis-option ${analysis === type.id ? 'selected' : ''}`}
-                  onClick={() => setAnalysis(type.id)}
-                  disabled={mcpStatus === "disconnected" || !selectedFile}
-                >
-                  <div className="mcp-analysis-option-icon">
-                    {type.icon}
-                  </div>
-                  <div className="mcp-analysis-option-text">
-                    <span>{type.label}</span>
-                    <span className="mcp-analysis-option-description">{type.description}</span>
-                  </div>
-                </button>
-              ))}
+              {analysisTypes
+                .filter(type => !comparisonMode ? !type.requiresComparison : type.supportsComparison)
+                .map((type) => (
+                  <button 
+                    key={type.id} 
+                    className={`mcp-analysis-option ${analysis === type.id ? 'selected' : ''}`}
+                    onClick={() => setAnalysis(type.id)}
+                    disabled={
+                      mcpStatus === "disconnected" || 
+                      (comparisonMode ? 
+                        !datasets.primary.file || 
+                        (type.requiresComparison && !datasets.secondary.file) : 
+                        !selectedFile)
+                    }
+                  >
+                    <div className="mcp-analysis-option-icon">
+                      {type.icon}
+                    </div>
+                    <div className="mcp-analysis-option-text">
+                      <span>{type.label}</span>
+                      <span className="mcp-analysis-option-description">{type.description}</span>
+                      {comparisonMode && type.requiresComparison && (
+                        <span className="mcp-analysis-option-badge">Requires both datasets</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
             </div>
           </div>
 
           <button 
             className="mcp-execute-button"
             onClick={executeAnalysis}
-            disabled={!selectedFile || !analysis || loading || mcpStatus === "disconnected"}
+            disabled={
+              (comparisonMode ? 
+                !datasets.primary.file || 
+                (analysis === "dataset_comparison" && !datasets.secondary.file) ||
+                (!datasets.secondary.file && analysisTypes.find(a => a.id === analysis)?.requiresComparison) : 
+                !selectedFile) || 
+              !analysis || 
+              loading || 
+              mcpStatus === "disconnected"
+            }
           >
             {loading ? (
               <>
@@ -726,7 +993,58 @@ export default function MCPDataAnalysis({ onBackToTools }) {
               <Loader2 size={36} className="mcp-spinner" />
               <p>Analyzing data...</p>
             </div>
-          ) : results ? (
+          ) : comparisonMode && comparisonResults ? (
+            // Comparison mode results
+            <div className="mcp-results-container">
+              <div className="mcp-results-header">
+                <h3>Comparison Results</h3>
+                <button 
+                  className="mcp-download-button" 
+                  onClick={() => {
+                    // Download comparison results logic
+                    const jsonString = JSON.stringify(comparisonResults, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `comparison-${analysis}-results.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Download size={14} />
+                  <span>Download</span>
+                </button>
+              </div>
+              <div className="mcp-results-content">
+                <DatasetComparison
+                  primaryDataset={{
+                    name: datasets.primary.file?.name || "Dataset A",
+                    // These values would come from the API response
+                    rowCount: comparisonResults?.results?.datasets?.primary?.row_count || 0,
+                    columnCount: comparisonResults?.results?.datasets?.primary?.column_count || 0,
+                    fileSize: `${(datasets.primary.file?.size / 1024).toFixed(1)} KB`,
+                    columns: comparisonResults?.results?.datasets?.primary?.columns || []
+                  }}
+                  secondaryDataset={{
+                    name: datasets.secondary.file?.name || "Dataset B",
+                    // These values would come from the API response
+                    rowCount: comparisonResults?.results?.datasets?.secondary?.row_count || 0,
+                    columnCount: comparisonResults?.results?.datasets?.secondary?.column_count || 0,
+                    fileSize: `${(datasets.secondary.file?.size / 1024).toFixed(1)} KB`,
+                    columns: comparisonResults?.results?.datasets?.secondary?.columns || []
+                  }}
+                  analysisResults={comparisonResults?.results}
+                  analysisType={analysis}
+                  loading={false}
+                />
+              </div>
+            </div>
+          ) : !comparisonMode && results ? (
+            // Single dataset mode results
             <div className="mcp-results-container">
               <div className="mcp-results-header">
                 <h3>Analysis Results</h3>
@@ -743,7 +1061,18 @@ export default function MCPDataAnalysis({ onBackToTools }) {
             <div className="mcp-placeholder">
               <Info size={36} className="text-muted" />
               <h3>Ready for Analysis</h3>
-              <p>Upload a file and select an analysis type to get started</p>
+              {comparisonMode && analysis === 'dataset_comparison' && datasets.primary.file && !datasets.secondary.file ? (
+                <div className="mcp-warning-message">
+                  <AlertCircle size={24} />
+                  <p>Dataset comparison requires both datasets. Please upload Dataset B.</p>
+                </div>
+              ) : (
+                <p>
+                  {comparisonMode 
+                    ? "Upload both datasets and select an analysis type to compare them"
+                    : "Upload a file and select an analysis type to get started"}
+                </p>
+              )}
             </div>
           )}
         </div>
