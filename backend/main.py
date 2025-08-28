@@ -11,6 +11,7 @@ import json
 import pandas as pd
 import numpy as np
 import io
+import base64
 import subprocess
 import tempfile
 from sqlalchemy.ext.asyncio import AsyncSession
