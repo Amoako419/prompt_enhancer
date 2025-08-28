@@ -787,16 +787,19 @@ export default function MCPDataAnalysis({ onBackToTools }) {
   return (
     <div className="mcp-data-analysis-container">
       {/* Header */}
-      <div className="mcp-data-analysis-header">
-        <button 
-          className="mcp-back-button" 
-          onClick={onBackToTools}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Tools</span>
-        </button>
-        <h2>MCP Data Analysis</h2>
-      </div>
+      <header className="chat-header">
+        <div className="header-left">
+          <button 
+            className="back-btn" 
+            onClick={onBackToTools}
+            title="Back to AI Tools"
+          >
+            <ArrowLeft size={20} />
+            <span className="back-text">Back to Tools</span>
+          </button>
+          <span>MCP Data Analysis</span>
+        </div>
+      </header>
 
       {/* Status indicator */}
       <div className="mcp-status-bar">

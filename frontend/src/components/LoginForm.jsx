@@ -17,7 +17,8 @@ export default function LoginForm({ onToggleForm }) {
 
     try {
       await login(username, password);
-      // Login successful - AuthContext will handle setting the user and token
+      // Login successful - Force refresh to apply new auth state and redirect
+      window.location.reload();
     } catch (err) {
       setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {

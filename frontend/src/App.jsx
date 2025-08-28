@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import ThemeToggle from './components/ThemeToggle';
 import UserProfile from './components/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
+import LandingPage from './components/LandingPage';
 import AITools from './components/AITools';
 import PromptEnhancerSimple from './components/PromptEnhancerSimple';
 import SqlConverter from './components/SqlConverter';
@@ -16,6 +18,7 @@ import "./App.css";
 import "./styles/responsive.css";
 
 export default function App() {
+  const [showLandingPage, setShowLandingPage] = useState(true);
   const [currentView, setCurrentView] = useState('tools'); // 'tools', 'enhancer', 'sqlConverter', 'dataExplorer', 'skillAssessment', 'pipelineGenerator', or 'mcpAnalysis'
 
   const renderCurrentView = () => {
@@ -62,15 +65,37 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <div className="app">
-          <header className="app-header">
-            <ThemeToggle />
-            <UserProfile />
-          </header>
-          <ProtectedRoute>
-            {renderCurrentView()}
-          </ProtectedRoute>
-        </div>
+        {showLandingPage ? (
+          <LandingPage 
+            onEnterApp={() => setShowLandingPage(false)} 
+            setCurrentView={setCurrentView}
+          />
+        ) : (
+          <div className="app">
+            {/* Only show header when in the main tools view */}
+            {currentView === 'tools' && (
+              <header className="app-header">
+                <div className="app-header-left">
+                  <button 
+                    className="back-to-landing-button" 
+                    onClick={() => setShowLandingPage(true)}
+                  >
+                    <ArrowLeft size={16} />
+                    Back to Home
+                  </button>
+                  <h1 className="app-title">AI Tools Suite</h1>
+                </div>
+                <div className="app-header-right">
+                  <ThemeToggle />
+                  <UserProfile />
+                </div>
+              </header>
+            )}
+            <ProtectedRoute>
+              {renderCurrentView()}
+            </ProtectedRoute>
+          </div>
+        )}
       </AuthProvider>
     </ThemeProvider>
   );

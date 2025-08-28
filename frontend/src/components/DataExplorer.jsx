@@ -127,14 +127,17 @@ export default function DataExplorer({ onBackToTools }) {
   return (
     <div className="data-explorer-wrapper">
       <header className="chat-header">
-        <button 
-          className="back-btn" 
-          onClick={onBackToTools}
-          title="Back to AI Tools"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <span>Smart Data Exploration</span>
+        <div className="header-left">
+          <button 
+            className="back-btn" 
+            onClick={onBackToTools}
+            title="Back to AI Tools"
+          >
+            <ArrowLeft size={20} />
+            <span className="back-text">Back to Tools</span>
+          </button>
+          <span>Smart Data Exploration</span>
+        </div>
       </header>
 
       <div className="explorer-container">
