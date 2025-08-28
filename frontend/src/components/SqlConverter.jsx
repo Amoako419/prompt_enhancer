@@ -113,14 +113,17 @@ export default function SqlConverter({ onBackToTools }) {
   return (
     <div className="sql-converter-wrapper">
       <header className="chat-header">
-        <button 
-          className="back-btn" 
-          onClick={onBackToTools}
-          title="Back to AI Tools"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <span>English to SQL Converter</span>
+        <div className="header-left">
+          <button 
+            className="back-btn" 
+            onClick={onBackToTools}
+            title="Back to AI Tools"
+          >
+            <ArrowLeft size={20} />
+            <span className="back-text">Back to Tools</span>
+          </button>
+          <span>English to SQL Converter</span>
+        </div>
       </header>
 
       <div className="converter-container">

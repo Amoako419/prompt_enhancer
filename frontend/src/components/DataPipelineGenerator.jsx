@@ -126,52 +126,49 @@ const DataPipelineGenerator = ({ onBack }) => {
     <div className="data-pipeline-container">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="data-pipeline-header">
-          <div className="back-navigation">
+        <div className="chat-header">
+          <div className="header-left">
             <button
+              className="back-btn"
               onClick={onBack}
-              className="back-navigation"
+              title="Back to AI Tools"
             >
               <ArrowLeft size={20} />
-              Back to Tools
+              <span className="back-text">Back to Tools</span>
             </button>
-          </div>
-          
-          <div className="header-title-section">
-            <div className="header-icon">
-              <Database size={24} />
-            </div>
-            <div className="header-text">
-              <h1>Data Pipeline Test Generator</h1>
-              <p>Generate realistic test data for data pipeline validation and testing</p>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="tab-navigation">
-            <button
-              onClick={() => setActiveTab('schema')}
-              className={`tab-button ${activeTab === 'schema' ? 'active' : ''}`}
-            >
-              <Table size={16} />
-              Schema Design
-            </button>
-            <button
-              onClick={() => setActiveTab('pipeline')}
-              className={`tab-button ${activeTab === 'pipeline' ? 'active' : ''}`}
-            >
-              <Settings size={16} />
-              Pipeline Config
-            </button>
-            <button
-              onClick={() => setActiveTab('generate')}
-              className={`tab-button ${activeTab === 'generate' ? 'active' : ''}`}
-            >
-              <Zap size={16} />
-              Generate Data
-            </button>
+            <span>Data Pipeline Test Generator</span>
           </div>
         </div>
+          
+        <div className="header-description">
+          <p>Generate realistic test data for data pipeline validation and testing</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="tab-navigation">
+          <button
+            onClick={() => setActiveTab('schema')}
+            className={`tab-button ${activeTab === 'schema' ? 'active' : ''}`}
+          >
+            <Table size={16} />
+            Schema Design
+          </button>
+          <button
+            onClick={() => setActiveTab('pipeline')}
+            className={`tab-button ${activeTab === 'pipeline' ? 'active' : ''}`}
+          >
+            <Settings size={16} />
+            Pipeline Config
+          </button>
+          <button
+            onClick={() => setActiveTab('generate')}
+            className={`tab-button ${activeTab === 'generate' ? 'active' : ''}`}
+          >
+            <Zap size={16} />
+            Generate Data
+          </button>
+        </div>
+      </div>
 
         {/* Schema Design Tab */}
         {activeTab === 'schema' && (
@@ -414,7 +411,6 @@ const DataPipelineGenerator = ({ onBack }) => {
           </div>
         )}
       </div>
-    </div>
   );
 };
 

@@ -447,14 +447,17 @@ export default function SkillAssessment({ onBackToTools }) {
     return (
       <div className="skill-assessment-wrapper">
         <header className="chat-header">
-          <button 
-            className="back-btn" 
-            onClick={onBackToTools}
-            title="Back to AI Tools"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <span>Skill Assessment Center</span>
+          <div className="header-left">
+            <button 
+              className="back-btn" 
+              onClick={onBackToTools}
+              title="Back to AI Tools"
+            >
+              <ArrowLeft size={20} />
+              <span className="back-text">Back to Tools</span>
+            </button>
+            <span>Skill Assessment Center</span>
+          </div>
           <button 
             className="create-quiz-btn" 
             onClick={() => setCurrentView('create-quiz')}
@@ -727,14 +730,16 @@ export default function SkillAssessment({ onBackToTools }) {
     return (
       <div className="skill-assessment-wrapper">
         <header className="chat-header">
-          <button 
-            className="back-btn" 
-            onClick={resetAssessment}
-            title="Back to Categories"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <span>Assessment Results</span>
+          <div className="header-left">
+            <button 
+              className="back-btn" 
+              onClick={resetAssessment}
+              title="Back to Categories"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <span>Assessment Results</span>
+          </div>
         </header>
 
         <div className="results-container">
