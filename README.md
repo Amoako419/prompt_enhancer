@@ -1,13 +1,15 @@
-# 🚀 Prompt Enhancer Chat
+# 🚀 DataProcAI
 
-A lightweight web app that lets you **chat with Google Gemini** and **auto-enhance prompts** before sending them.
+An advanced data processing platform with AI capabilities, including data analysis, SQL conversion, pipeline generation, and more.
 
 Features
 --------
-- Chat-style interface (User ↔ Assistant)  
-- One-click **prompt enhancement** (✨ button)  
-- Retry / Cancel / Replace flow for enhanced prompts  
-- FastAPI backend, React + Vite frontend  
+- Data analysis and visualization tools
+- SQL and MongoDB query conversion
+- Dataset comparison capabilities
+- Multiple AI tools for data processing
+- Data pipeline generation
+- FastAPI backend, React + Vite frontend
 - Ready to deploy anywhere (Docker, Render, Vercel, etc.)
 
 Tech Stack

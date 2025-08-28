@@ -21,17 +21,10 @@ export default function Auth() {
     );
   }
 
-  // If user is already logged in, show profile info and logout button
+  // If user is already logged in, we'll let the parent component handle redirection
+  // The ProtectedRoute will render the dashboard automatically
   if (currentUser) {
-    return (
-      <div className="auth-profile">
-        <h2>Welcome, {currentUser.username}</h2>
-        <p>Email: {currentUser.email}</p>
-        <button onClick={logout} className="auth-button logout-button">
-          Logout
-        </button>
-      </div>
-    );
+    return null;
   }
 
   return (
