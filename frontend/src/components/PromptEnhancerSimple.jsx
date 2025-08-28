@@ -116,14 +116,14 @@ export default function PromptEnhancerSimple({ onBackToTools }) {
           <div className="header-left">
             <button onClick={onBackToTools} className="back-btn-modern">
               <ArrowLeft size={18} />
-              Back to Tools
+              <span>Back to Tools</span>
             </button>
             
             <div className="logo-section">
               <div className="logo-icon">
                 <Wand2 size={18} />
               </div>
-              <span className="logo-text">Prompt Enhancer</span>
+              <span className="logo-text">AI Text Processor</span>
             </div>
           </div>
           

@@ -244,7 +244,7 @@ export default function PromptEnhancerModern({ onBackToTools }) {
             <div className="logo-icon">
               <Wand2 size={18} />
             </div>
-            <span className="logo-text">Prompt Enhancer</span>
+            <span className="logo-text">AI Text Processor</span>
           </div>
         </div>
         

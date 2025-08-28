@@ -26,8 +26,8 @@ from routers import auth, memory, ai_memory, custom_quiz
 load_dotenv()
 
 app = FastAPI(
-    title="Prompt Enhancer API",
-    description="API for prompt enhancement with user memory and authentication",
+    title="DataProcAI API",
+    description="API for data processing with AI, user memory, and authentication",
     version="2.0.0",
 )
 

@@ -128,6 +128,7 @@ export default function PromptEnhancer({ onBackToTools }) {
     const userMsg = { role: "user", text: input };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
+    const originalPrompt = input; // Store for history
     setInput("");
     setLoadingReply(true);
 
@@ -137,6 +138,9 @@ export default function PromptEnhancer({ onBackToTools }) {
       });
       const assistantMsg = { role: "assistant", text: data.reply };
       setMessages((m) => [...m, assistantMsg]);
+      
+      // Add to history after successful response
+      addToHistory(originalPrompt, originalPrompt, "chat");
     } catch (err) {
       const errorMsg = { role: "assistant", text: "⚠️ Error getting response." };
       setMessages((m) => [...m, errorMsg]);
@@ -180,6 +184,8 @@ export default function PromptEnhancer({ onBackToTools }) {
   const handleSavePrompt = () => {
     addToHistory(promptToSave.original, promptToSave.enhanced, promptToSave.category);
     setShowSaveDialog(false);
+    // Show history panel to highlight the newly saved prompt
+    setShowHistoryPanel(true);
   };
 
   return (
@@ -299,14 +305,16 @@ export default function PromptEnhancer({ onBackToTools }) {
 
       <div className={`chat-wrapper ${showHistoryPanel ? 'with-history-panel' : ''}`}>
         <header className="chat-header">
-          <button 
-            className="back-btn" 
-            onClick={onBackToTools}
-            title="Back to AI Tools"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <span>Prompt Enhancer Chat</span>
+          <div className="header-left">
+            <button 
+              className="back-btn" 
+              onClick={onBackToTools}
+              title="Back to AI Tools"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <span>AI Text Processor</span>
+          </div>
           <div className="header-actions">
             <button
               className={`history-toggle-btn ${showHistoryPanel ? 'active' : ''}`}
@@ -368,13 +376,13 @@ export default function PromptEnhancer({ onBackToTools }) {
             {loadingEnhance ? <RotateCw size={18} className="spinning" /> : <Wand2 size={18} />}
           </button>
         </div>
-        {/* <button className="send-btn" onClick={sendMessage} disabled={loadingReply}>
+        <button className="send-btn" onClick={sendMessage} disabled={loadingReply}>
           {loadingReply ? "Thinking..." : (
             <>
               Send <Send size={16} style={{ marginLeft: 4 }} />
             </>
           )}
-        </button> */}
+        </button>
       </div>
 
       {/* ---------- enhancement dialog ---------- */}
